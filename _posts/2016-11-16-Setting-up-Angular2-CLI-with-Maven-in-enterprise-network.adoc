@@ -1,6 +1,6 @@
 = Setting up Angular2 CLI with Maven in enterprise network
 
-:hp-tags: Maven, Angular
+:hp-tags: Maven, Angular, Windows 
 
 Working with Angular2 CLI is easy - you just wait for npm to download the Internet and afterwards and then `ng` will take care of all your tooling setup.
 
