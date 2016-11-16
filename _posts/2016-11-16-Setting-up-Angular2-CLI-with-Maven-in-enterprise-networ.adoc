@@ -1,4 +1,4 @@
-= Setting up Angular2 CLI with Maven in enterprise network (2)
+= Setting up Angular2 CLI with Maven in enterprise networ
 
 :hp-tags:Maven,Angular
 
