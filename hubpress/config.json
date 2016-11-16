@@ -1,1 +1,18 @@
-{"meta":{"username":"pdudits","repositoryName":"hubpress","branch":"gh-pages"},"site":{"title":"hubpress test ","url":"https://pdudits.github.io/hubpress"},"socialnetwork":{"twitter":"pdudits","github":"pdudits "},"theme":{"name":"Casper","url":"https://pdudits.github.io/hubpress/themes/Casper"}}
+{
+  "meta": {
+    "username": "pdudits",
+    "repositoryName": "hubpress",
+    "branch": "gh-pages"
+  },
+  "site": {
+    "title": "Not obvious ",
+    "description": "Notes about programming tasks that took too long"
+  },
+  "socialnetwork": {
+    "twitter": "pdudits",
+    "github": "pdudits "
+  },
+  "theme": {
+    "name": "casper"
+  }
+}
