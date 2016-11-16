@@ -6,10 +6,14 @@
   },
   "site": {
     "title": "Not obvious ",
-    "description": "Notes about programming tasks that took too long. By Patrik Duditš. "
+    "description": "Notes about programming tasks that took too long. By Patrik Duditš. ",
+    "googleAnalytics": "UA-340613-5",
+    "disqus": "pdudits"
   },
   "socialnetwork": {
     "twitter": "pdudits",
+    "facebook": "pdudits",
+    "flickr": "pdudits",
     "github": "pdudits "
   },
   "theme": {
