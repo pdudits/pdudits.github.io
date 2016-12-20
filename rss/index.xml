@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io/hubpress</link><generator>RSS for Node</generator><lastBuildDate>Tue, 20 Dec 2016 21:06:19 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/hubpress/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Setting up Angular2 CLI with Maven in enterprise network]]></title><description><![CDATA[<div id="preamble">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io/hubpress</link><generator>RSS for Node</generator><lastBuildDate>Tue, 20 Dec 2016 21:34:52 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/hubpress/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Setting up Angular2 CLI with Maven in enterprise network]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>Working with Angular2 CLI is easy - you just wait for npm to download the Internet and afterwards and then <code>ng</code> will take care of all your tooling setup.</p>
@@ -306,4 +306,16 @@ set PATH=node_modules\.bin;..\target\node;%PATH%</code></pre>
 </div>
 </div>
 </div>
-</div>]]></description><link>https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</guid><category><![CDATA[Maven]]></category><category><![CDATA[ Angular]]></category><category><![CDATA[ Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 16 Nov 2016 00:00:00 GMT</pubDate></item></channel></rss>
+</div>]]></description><link>https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</guid><category><![CDATA[Maven]]></category><category><![CDATA[ Angular]]></category><category><![CDATA[ Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 16 Nov 2016 00:00:00 GMT</pubDate></item><item><title><![CDATA[400 Bad Request when using Glassfish REST API]]></title><description><![CDATA[<div class="paragraph">
+<p>When you try to automate your Glassfish administration duties with its REST API using POST or DELETE methods, and all you get is HTTP response 400 and zero content, you forgot to read <a href="http://docs.oracle.com/cd/E26576_01/doc.312/e24928/general-administration.htm#GSADG00708">this:</a></p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>REST requests that add, update, or delete objects must specify the <code>X-Requested-By</code> header with the value <code>GlassFish REST HTML interface</code>.</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>It is intended to prevent CSRF attacks as noted in <a href="http://blogs.steeplesoft.com/2012/03/glassfish-3-1-2-and-rest-security/">Jason&#8217;s Lee post</a>.</p>
+</div>]]></description><link>https://pdudits.github.io/hubpress/2012/05/23/400-Bad-Request-when-using-Glassfish-REST-API.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2012/05/23/400-Bad-Request-when-using-Glassfish-REST-API.html</guid><category><![CDATA[Glassfish]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 23 May 2012 00:00:00 GMT</pubDate></item></channel></rss>
