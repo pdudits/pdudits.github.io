@@ -11,10 +11,10 @@
     "disqus": "pdudits"
   },
   "socialnetwork": {
-    "twitter": "pdudits",
-    "facebook": "pdudits",
-    "flickr": "pdudits",
-    "github": "pdudits "
+    "twitter": "https://twitter.com/pdudits",
+    "facebook": "https://facebook.com/patrik.dudits",
+    "flickr": "https://flickr.com/pdudits",
+    "github": "https://github.com/pdudits "
   },
   "theme": {
     "name": "saga"
