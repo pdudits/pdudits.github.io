@@ -1,0 +1,231 @@
+= Setting up Angular2 CLI with Maven in enterprise network
+
+:hp-tags: Maven, Angular, Windows 
+
+Working with Angular2 CLI is easy - you just wait for npm to download the Internet and afterwards and then `ng` will take care of all your tooling setup.
+
+Not so much if at your workplace you're running Windows, your network has NTLM-based firewall and your project is actually Java-based one built with Maven.
+
+Even if the proxy for NPM can be configured via `npm set` or `http_proxy` environment variable, npm does not support `no_proxy` clause, so the things
+would start failing if you want to consume your own packages.
+
+== Needed infrastructure
+
+Instead, we will use https://www.sonatype.com/download-oss-sonatype[Nexus 3]. We will install it on a server, that has reasonable access to Internet (e. g. no auth, or service user autorization to proxy), and it will do the proxying for all things NodeJS and NPM we need.
+
+For running NPM as part of our Maven build, we'll use https://github.com/eirslett/frontend-maven-plugin[Frontend Maven Plugin]. It will take care of installing node, npm and project dependencies for us, and also for our CI build.
+
+== Maven module structure
+
+We will lay out our modules in following way:
+
+----
+parent (pom)
+`- app-backend (war module)
+`- app-frontend (war module)
+   `- node (js project)
+----
+
+Module `app-frontend` will invoke npm build in directory `app-frontend/node`. I tried to be Maven compatible here at first, but it wasn't really helping when trying to open the JS project in the IDE. Maven will then pack the result of npm into a `.war` file.
+
+In case you want to deploy single artifact, `app-backend` may depend on `app-frontend` and the build result will be then copied to backend `.war`.
+
+== Setting up proxies in Nexus
+
+After you install nexus and verify that it is able to download artifacts you will need following repositories.
+
+|===
+| Repo Name | Type | Remote path | Note
+
+| npm | npm (Proxy) | https://registry.npmjs.org
+| We actually use group, along with our release repository, but this is minimal setup needed
+
+| node-dist | raw (Proxy) | https://nodejs.org/dist/
+| For downloading node binaries
+
+| node-sass | raw (Proxy) | https://github.com/sass/node-sass/releases/download/
+| node-sass binaries
+
+| node-zopfli | raw (Proxy) | https://node-zopfli.s3.amazonaws.com
+| node-zopfli binaries
+|===
+
+Generally you only need the first two. The other two are dependencies of angular-cli that either need to be build or downloaded as binaries.
+
+We had quite some problems when there was reverse proxy in front of Nexus. Or, actually npm did have problems.
+So for now we are speaking to nexus3 directly.
+
+== Frontend POM
+
+The `pom.xml` of `app-frontend` is different from your usual pom.
+
+1. It doesn't compile any java or run surefire
+2. It will also clean `node/node_modules` in clean phase
+3. It will download node binaries and npm installation from nexus
+4. It will run npm install
+5. It will run npm run build to invoke build of the project
+6. It will package the result of the build into a `.war` file
+
+[source,xml]
+----
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>app-frontend</artifactId>
+  <packaging>war</packaging>
+
+  <name>app-frontend</name>
+
+  <properties>
+    <!-- (1) this is NOT a java project, therefore we do not compile anything -->
+    <maven.main.skip>true</maven.main.skip>
+    <maven.test.skip>true</maven.test.skip>
+    <!-- this is our Nexus3 installations. No reverse proxy in front -->
+    <url.nexus>http://nexus.server:8088/nexus3</url.nexus>
+    <!-- proxy of https://nodejs.org/dist -->
+    <node.repository>${url.nexus}/repository/node-dist/</node.repository>
+    <!-- proxy of NPM registry -->
+    <npm.registry>${url.nexus}/repository/npm/</npm.registry>
+    <!-- location of npm installation within npm registry -->
+    <npm.repository>${npm.registry}npm/-/</npm.repository>
+  </properties>
+
+  <dependencies />
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <!-- (2) during clean phase also clean node_modules of js project -->
+              <directory>node/node_modules</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>1.2</version>
+        <configuration>
+          <npmVersion>3.10.8</npmVersion>
+          <nodeVersion>v6.9.1</nodeVersion>
+          <workingDirectory>node</workingDirectory>
+          <!-- node executable and npm gets installed under target/ -->
+          <installDirectory>target</installDirectory>
+          <npmDownloadRoot>${npm.repository}</npmDownloadRoot>
+          <nodeDownloadRoot>${node.repository}</nodeDownloadRoot>
+          <npmRegistryURL>${npm.registry}</npmRegistryURL>
+          <npmInheritsProxyConfigFromMaven>false</npmInheritsProxyConfigFromMaven>
+        </configuration>
+        <executions>
+          <execution>
+            <!-- (3) First, install node and npm -->
+            <id>install node and npm</id>
+            <goals>
+              <goal>install-node-and-npm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+          </execution>
+          <execution>
+            <!-- (4) And then run npm install -->
+            <id>npm</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <!-- The extra arguments specify paths to proxied binaries -->
+              <arguments>install --sass-binary-site=${url.nexus}/repository/node-sass/
+                       --zopfli_binary_host_mirror=${url.nexus}/repository/node-zopfli</arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- (5) And finally do npm run build. We do ng build --aot --prod there -->
+            <id>build</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>prepare-package</phase>
+            <configuration>
+              <arguments>run build</arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <webResources>
+            <!-- (6) Put the build results and all the assets into the war -->
+            <resource>
+              <directory>node/dist</directory>
+            </resource>
+            <resource>
+              <directory>node/assets</directory>
+            </resource>
+          </webResources>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+----
+
+== Tool wrappers
+
+After we have `mvn clean install` passing and building our frontend, we might want to ensure, that developers will also use the same version of node and npm that our CI does. Since we're on Windows, we'll set up two cute wrappers in directory `app-frontend/node`:
+
+[source,title=npm.cmd]
+----
+@echo off
+set dir=%~dp0
+set node_dir=%dir%\..\target\node
+IF NOT EXIST "%node_dir%\node.exe" (
+    rem Invoke maven to install the tools
+	cd ..
+	call mvn frontend:install-node-and-npm
+	cd %dir%
+)
+
+%node_dir%\node.exe %node_dir%\node_modules\npm\bin\npm-cli.js %*
+----
+
+This ensures that when we invoke npm in project directory the version that Maven will use is used. It also automatically downloads it when not present!
+
+[source,title=ng.cmd]
+----
+@echo off
+set dir=%~dp0
+REM installing angular-cli
+set acli_dir=%dir%node_modules\angular-cli\bin
+IF NOT EXIST "%acli_dir%\ng" (
+   cd ..
+   call mvn generate-resources
+   cd %dir%
+)
+set node_dir=%dir%\..\target\node
+call %node_dir%\node.exe %acli_dir%\ng %*
+----
+We do the same for `ng`. We cannot just run `node_modules\.bin\ng` as that would invoke with our system's node. It is probably much easier to `set PATH=..\target\node;node_modules\.bin;%PATH%` but you cannot be sure enough with lazy people.
+
+For the less lazy we provide following file they should execute when they start a new terminal for the project:
+
+[source,title=initenv.cmd]
+----
+set HTTP_PROXY=
+set HTTPS_PROXY=
+set PATH=node_modules\.bin;..\target\node;%PATH%
+----

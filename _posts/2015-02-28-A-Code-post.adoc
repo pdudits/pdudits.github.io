@@ -1,0 +1,25 @@
+= A Code post
+Patrik Duditš
+:hp-tags: java
+
+The main focus on my blog will usually always be code. I like the concept of hubpress, that it gives me quite portable asciidoc environment, but I need to know if there is a way to learn it to highligh code properly.
+
+I will do Java:
+
+[source, java]
+----
+public static void main(String... args) {
+    System.out.println("I need syntax highlighting!");
+}
+----
+
+or I will do clojure
+
+[source, clojure]
+----
+(defn main- [& args] (println "I really need syntax highlighting!"))
+----
+
+Or I will also do lots of `inline` references.
+
+So let's dive in into the code and see if some highlights can be added.

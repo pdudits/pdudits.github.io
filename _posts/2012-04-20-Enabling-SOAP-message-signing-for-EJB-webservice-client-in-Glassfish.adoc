@@ -1,0 +1,39 @@
+= Enabling SOAP message signing for EJB webservice client in Glassfish
+:hp-tags: Glassfish,JAX-WS
+:published_at: 2012-04-20
+
+Today's solution is for following scenario: An EJB uses a web service client, and needs to sign its request with a trusted certificate. We are running Glassfish 3.1.1. Its documentation is http://docs.oracle.com/cd/E18930_01/html/821-2418/beaca.html#gbjxw[pretty straighforward] about specifying default client provider, which will cause all webservice calls to be signed. But we cannot do that, because other web service we're calling cannot handle digitally signed SOAP messages. Documentation only mentions http://docs.oracle.com/cd/E18930_01/html/821-2418/beaca.html#beacg[web service endpoint configuration].
+
+== Here's what to do
+
+Add following to your `glassfish-ejb-jar.xml`:
+
+[source,xml
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE glassfish-ejb-jar PUBLIC "-//GlassFish.org//DTD GlassFish Application Server 3.1 EJB 3.1//EN" 
+  "http://glassfish.org/dtds/glassfish-ejb-jar_3_1-1.dtd">
+<glassfish-ejb-jar>
+    <enterprise-beans>
+        <ejb>
+            <ejb-name>EjbThatSignsSoapRequests</ejb-name>
+            <service-ref>
+                <!-- you might need explicit @WebService(name="service") on that field,
+                     even if the field is named service -->
+                <service-ref-name>service</service-ref-name>
+                <port-info>
+                    <!-- This is the vital part - specify port of web service -->
+                    <wsdl-port>
+                        <namespaceURI>urn:webservice:namespace-from-wsdl</namespaceURI>
+                        <localpart>WebServicePortName</localpart>
+                    </wsdl-port>
+                    <message-security-binding
+                        auth-layer="SOAP" provider-id="ClientProvider"/>
+                </port-info>
+            </service-ref>
+       </ejb>
+   </enterprise-beans>
+</glassfish-ejb-jar>
+----
+
+Then, configure your client e. g. via admin gui at path *Configurations > server-config > Security > Message Security > SOAP > Tab Providers > Client Provider*. 

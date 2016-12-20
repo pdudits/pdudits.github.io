@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io/hubpress</link><generator>RSS for Node</generator><lastBuildDate>Tue, 20 Dec 2016 21:50:37 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/hubpress/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Setting up Angular2 CLI with Maven in enterprise network]]></title><description><![CDATA[<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Working with Angular2 CLI is easy - you just wait for npm to download the Internet and afterwards and then <code>ng</code> will take care of all your tooling setup.</p>
+</div>
+<div class="paragraph">
+<p>Not so much if at your workplace you&#8217;re running Windows, your network has NTLM-based firewall and your project is actually Java-based one built with Maven.</p>
+</div>
+<div class="paragraph">
+<p>Even if the proxy for NPM can be configured via <code>npm set</code> or <code>http_proxy</code> environment variable, npm does not support <code>no_proxy</code> clause, so the things
+would start failing if you want to consume your own packages.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_needed_infrastructure">Needed infrastructure</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Instead, we will use <a href="https://www.sonatype.com/download-oss-sonatype">Nexus 3</a>. We will install it on a server, that has reasonable access to Internet (e. g. no auth, or service user autorization to proxy), and it will do the proxying for all things NodeJS and NPM we need.</p>
+</div>
+<div class="paragraph">
+<p>For running NPM as part of our Maven build, we&#8217;ll use <a href="https://github.com/eirslett/frontend-maven-plugin">Frontend Maven Plugin</a>. It will take care of installing node, npm and project dependencies for us, and also for our CI build.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_maven_module_structure">Maven module structure</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We will lay out our modules in following way:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>parent (pom)
+`- app-backend (war module)
+`- app-frontend (war module)
+   `- node (js project)</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Module <code>app-frontend</code> will invoke npm build in directory <code>app-frontend/node</code>. I tried to be Maven compatible here at first, but it wasn&#8217;t really helping when trying to open the JS project in the IDE. Maven will then pack the result of npm into a <code>.war</code> file.</p>
+</div>
+<div class="paragraph">
+<p>In case you want to deploy single artifact, <code>app-backend</code> may depend on <code>app-frontend</code> and the build result will be then copied to backend <code>.war</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setting_up_proxies_in_nexus">Setting up proxies in Nexus</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After you install nexus and verify that it is able to download artifacts you will need following repositories.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Repo Name</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Remote path</th>
+<th class="tableblock halign-left valign-top">Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">npm</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">npm (Proxy)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://registry.npmjs.org" class="bare">https://registry.npmjs.org</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">We actually use group, along with our release repository, but this is minimal setup needed</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node-dist</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">raw (Proxy)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://nodejs.org/dist/" class="bare">https://nodejs.org/dist/</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">For downloading node binaries</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node-sass</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">raw (Proxy)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://github.com/sass/node-sass/releases/download/" class="bare">https://github.com/sass/node-sass/releases/download/</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node-sass binaries</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node-zopfli</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">raw (Proxy)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="https://node-zopfli.s3.amazonaws.com" class="bare">https://node-zopfli.s3.amazonaws.com</a></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node-zopfli binaries</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>Generally you only need the first two. The other two are dependencies of angular-cli that either need to be build or downloaded as binaries.</p>
+</div>
+<div class="paragraph">
+<p>We had quite some problems when there was reverse proxy in front of Nexus. Or, actually npm did have problems.
+So for now we are speaking to nexus3 directly.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_frontend_pom">Frontend POM</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <code>pom.xml</code> of <code>app-frontend</code> is different from your usual pom.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>It doesn&#8217;t compile any java or run surefire</p>
+</li>
+<li>
+<p>It will also clean <code>node/node_modules</code> in clean phase</p>
+</li>
+<li>
+<p>It will download node binaries and npm installation from nexus</p>
+</li>
+<li>
+<p>It will run npm install</p>
+</li>
+<li>
+<p>It will run npm run build to invoke build of the project</p>
+</li>
+<li>
+<p>It will package the result of the build into a <code>.war</code> file</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-xml" data-lang="xml">&lt;project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;parent&gt;
+    &lt;groupId&gt;com.example&lt;/groupId&gt;
+    &lt;artifactId&gt;parent&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0-SNAPSHOT&lt;/version&gt;
+  &lt;/parent&gt;
+
+  &lt;artifactId&gt;app-frontend&lt;/artifactId&gt;
+  &lt;packaging&gt;war&lt;/packaging&gt;
+
+  &lt;name&gt;app-frontend&lt;/name&gt;
+
+  &lt;properties&gt;
+    &lt;!-- (1) this is NOT a java project, therefore we do not compile anything --&gt;
+    &lt;maven.main.skip&gt;true&lt;/maven.main.skip&gt;
+    &lt;maven.test.skip&gt;true&lt;/maven.test.skip&gt;
+    &lt;!-- this is our Nexus3 installations. No reverse proxy in front --&gt;
+    &lt;url.nexus&gt;http://nexus.server:8088/nexus3&lt;/url.nexus&gt;
+    &lt;!-- proxy of https://nodejs.org/dist --&gt;
+    &lt;node.repository&gt;${url.nexus}/repository/node-dist/&lt;/node.repository&gt;
+    &lt;!-- proxy of NPM registry --&gt;
+    &lt;npm.registry&gt;${url.nexus}/repository/npm/&lt;/npm.registry&gt;
+    &lt;!-- location of npm installation within npm registry --&gt;
+    &lt;npm.repository&gt;${npm.registry}npm/-/&lt;/npm.repository&gt;
+  &lt;/properties&gt;
+
+  &lt;dependencies /&gt;
+
+  &lt;build&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-clean-plugin&lt;/artifactId&gt;
+        &lt;version&gt;3.0.0&lt;/version&gt;
+        &lt;configuration&gt;
+          &lt;filesets&gt;
+            &lt;fileset&gt;
+              &lt;!-- (2) during clean phase also clean node_modules of js project --&gt;
+              &lt;directory&gt;node/node_modules&lt;/directory&gt;
+            &lt;/fileset&gt;
+          &lt;/filesets&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;com.github.eirslett&lt;/groupId&gt;
+        &lt;artifactId&gt;frontend-maven-plugin&lt;/artifactId&gt;
+        &lt;version&gt;1.2&lt;/version&gt;
+        &lt;configuration&gt;
+          &lt;npmVersion&gt;3.10.8&lt;/npmVersion&gt;
+          &lt;nodeVersion&gt;v6.9.1&lt;/nodeVersion&gt;
+          &lt;workingDirectory&gt;node&lt;/workingDirectory&gt;
+          &lt;!-- node executable and npm gets installed under target/ --&gt;
+          &lt;installDirectory&gt;target&lt;/installDirectory&gt;
+          &lt;npmDownloadRoot&gt;${npm.repository}&lt;/npmDownloadRoot&gt;
+          &lt;nodeDownloadRoot&gt;${node.repository}&lt;/nodeDownloadRoot&gt;
+          &lt;npmRegistryURL&gt;${npm.registry}&lt;/npmRegistryURL&gt;
+          &lt;npmInheritsProxyConfigFromMaven&gt;false&lt;/npmInheritsProxyConfigFromMaven&gt;
+        &lt;/configuration&gt;
+        &lt;executions&gt;
+          &lt;execution&gt;
+            &lt;!-- (3) First, install node and npm --&gt;
+            &lt;id&gt;install node and npm&lt;/id&gt;
+            &lt;goals&gt;
+              &lt;goal&gt;install-node-and-npm&lt;/goal&gt;
+            &lt;/goals&gt;
+            &lt;phase&gt;generate-resources&lt;/phase&gt;
+          &lt;/execution&gt;
+          &lt;execution&gt;
+            &lt;!-- (4) And then run npm install --&gt;
+            &lt;id&gt;npm&lt;/id&gt;
+            &lt;goals&gt;
+              &lt;goal&gt;npm&lt;/goal&gt;
+            &lt;/goals&gt;
+            &lt;phase&gt;generate-resources&lt;/phase&gt;
+            &lt;configuration&gt;
+              &lt;!-- The extra arguments specify paths to proxied binaries --&gt;
+              &lt;arguments&gt;install --sass-binary-site=${url.nexus}/repository/node-sass/
+                       --zopfli_binary_host_mirror=${url.nexus}/repository/node-zopfli&lt;/arguments&gt;
+            &lt;/configuration&gt;
+          &lt;/execution&gt;
+          &lt;execution&gt;
+            &lt;!-- (5) And finally do npm run build. We do ng build --aot --prod there --&gt;
+            &lt;id&gt;build&lt;/id&gt;
+            &lt;goals&gt;
+              &lt;goal&gt;npm&lt;/goal&gt;
+            &lt;/goals&gt;
+            &lt;phase&gt;prepare-package&lt;/phase&gt;
+            &lt;configuration&gt;
+              &lt;arguments&gt;run build&lt;/arguments&gt;
+            &lt;/configuration&gt;
+          &lt;/execution&gt;
+        &lt;/executions&gt;
+      &lt;/plugin&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+        &lt;artifactId&gt;maven-war-plugin&lt;/artifactId&gt;
+        &lt;version&gt;2.6&lt;/version&gt;
+        &lt;configuration&gt;
+          &lt;webResources&gt;
+            &lt;!-- (6) Put the build results and all the assets into the war --&gt;
+            &lt;resource&gt;
+              &lt;directory&gt;node/dist&lt;/directory&gt;
+            &lt;/resource&gt;
+            &lt;resource&gt;
+              &lt;directory&gt;node/assets&lt;/directory&gt;
+            &lt;/resource&gt;
+          &lt;/webResources&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/build&gt;
+
+&lt;/project&gt;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tool_wrappers">Tool wrappers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>After we have <code>mvn clean install</code> passing and building our frontend, we might want to ensure, that developers will also use the same version of node and npm that our CI does. Since we&#8217;re on Windows, we&#8217;ll set up two cute wrappers in directory <code>app-frontend/node</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">npm.cmd</div>
+<div class="content">
+<pre class="highlight"><code>@echo off
+set dir=%~dp0
+set node_dir=%dir%\..\target\node
+IF NOT EXIST "%node_dir%\node.exe" (
+    rem Invoke maven to install the tools
+	cd ..
+	call mvn frontend:install-node-and-npm
+	cd %dir%
+)
+
+%node_dir%\node.exe %node_dir%\node_modules\npm\bin\npm-cli.js %*</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This ensures that when we invoke npm in project directory the version that Maven will use is used. It also automatically downloads it when not present!</p>
+</div>
+<div class="listingblock">
+<div class="title">ng.cmd</div>
+<div class="content">
+<pre class="highlight"><code>@echo off
+set dir=%~dp0
+REM installing angular-cli
+set acli_dir=%dir%node_modules\angular-cli\bin
+IF NOT EXIST "%acli_dir%\ng" (
+   cd ..
+   call mvn generate-resources
+   cd %dir%
+)
+set node_dir=%dir%\..\target\node
+call %node_dir%\node.exe %acli_dir%\ng %*</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We do the same for <code>ng</code>. We cannot just run <code>node_modules\.bin\ng</code> as that would invoke with our system&#8217;s node. It is probably much easier to <code>set PATH=..\target\node;node_modules\.bin;%PATH%</code> but you cannot be sure enough with lazy people.</p>
+</div>
+<div class="paragraph">
+<p>For the less lazy we provide following file they should execute when they start a new terminal for the project:</p>
+</div>
+<div class="listingblock">
+<div class="title">initenv.cmd</div>
+<div class="content">
+<pre class="highlight"><code>set HTTP_PROXY=
+set HTTPS_PROXY=
+set PATH=node_modules\.bin;..\target\node;%PATH%</code></pre>
+</div>
+</div>
+</div>
+</div>]]></description><link>https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</guid><category><![CDATA[Maven]]></category><category><![CDATA[ Angular]]></category><category><![CDATA[ Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 16 Nov 2016 00:00:00 GMT</pubDate></item><item><title><![CDATA[400 Bad Request when using Glassfish REST API]]></title><description><![CDATA[<div class="paragraph">
+<p>When you try to automate your Glassfish administration duties with its REST API using POST or DELETE methods, and all you get is HTTP response 400 and zero content, you forgot to read <a href="http://docs.oracle.com/cd/E26576_01/doc.312/e24928/general-administration.htm#GSADG00708">this:</a></p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>REST requests that add, update, or delete objects must specify the <code>X-Requested-By</code> header with the value <code>GlassFish REST HTML interface</code>.</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>It is intended to prevent CSRF attacks as noted in <a href="http://blogs.steeplesoft.com/2012/03/glassfish-3-1-2-and-rest-security/">Jason&#8217;s Lee post</a>.</p>
+</div>]]></description><link>https://pdudits.github.io/hubpress/2012/05/23/400-Bad-Request-when-using-Glassfish-REST-API.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2012/05/23/400-Bad-Request-when-using-Glassfish-REST-API.html</guid><category><![CDATA[Glassfish]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 23 May 2012 00:00:00 GMT</pubDate></item><item><title><![CDATA[Enabling SOAP message signing for EJB webservice client in Glassfish]]></title><description><![CDATA[<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Today&#8217;s solution is for following scenario: An EJB uses a web service client, and needs to sign its request with a trusted certificate. We are running Glassfish 3.1.1. Its documentation is <a href="http://docs.oracle.com/cd/E18930_01/html/821-2418/beaca.html#gbjxw">pretty straighforward</a> about specifying default client provider, which will cause all webservice calls to be signed. But we cannot do that, because other web service we&#8217;re calling cannot handle digitally signed SOAP messages. Documentation only mentions <a href="http://docs.oracle.com/cd/E18930_01/html/821-2418/beaca.html#beacg">web service endpoint configuration</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_here_s_what_to_do">Here&#8217;s what to do</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Add following to your <code>glassfish-ejb-jar.xml</code>:</p>
+</div>
+<div class="paragraph">
+<p>[source,xml</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE glassfish-ejb-jar PUBLIC "-//GlassFish.org//DTD GlassFish Application Server 3.1 EJB 3.1//EN"
+  "http://glassfish.org/dtds/glassfish-ejb-jar_3_1-1.dtd"&gt;
+&lt;glassfish-ejb-jar&gt;
+    &lt;enterprise-beans&gt;
+        &lt;ejb&gt;
+            &lt;ejb-name&gt;EjbThatSignsSoapRequests&lt;/ejb-name&gt;
+            &lt;service-ref&gt;
+                &lt;!-- you might need explicit @WebService(name="service") on that field,
+                     even if the field is named service --&gt;
+                &lt;service-ref-name&gt;service&lt;/service-ref-name&gt;
+                &lt;port-info&gt;
+                    &lt;!-- This is the vital part - specify port of web service --&gt;
+                    &lt;wsdl-port&gt;
+                        &lt;namespaceURI&gt;urn:webservice:namespace-from-wsdl&lt;/namespaceURI&gt;
+                        &lt;localpart&gt;WebServicePortName&lt;/localpart&gt;
+                    &lt;/wsdl-port&gt;
+                    &lt;message-security-binding
+                        auth-layer="SOAP" provider-id="ClientProvider"/&gt;
+                &lt;/port-info&gt;
+            &lt;/service-ref&gt;
+       &lt;/ejb&gt;
+   &lt;/enterprise-beans&gt;
+&lt;/glassfish-ejb-jar&gt;</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then, configure your client e. g. via admin gui at path <strong>Configurations &gt; server-config &gt; Security &gt; Message Security &gt; SOAP &gt; Tab Providers &gt; Client Provider</strong>.</p>
+</div>
+</div>
+</div>]]></description><link>https://pdudits.github.io/hubpress/2012/04/20/Enabling-SOAP-message-signing-for-EJB-webservice-client-in-Glassfish.html</link><guid isPermaLink="true">https://pdudits.github.io/hubpress/2012/04/20/Enabling-SOAP-message-signing-for-EJB-webservice-client-in-Glassfish.html</guid><category><![CDATA[Glassfish]]></category><category><![CDATA[JAX-WS]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Fri, 20 Apr 2012 00:00:00 GMT</pubDate></item></channel></rss>

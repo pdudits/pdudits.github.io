@@ -1,0 +1,13 @@
+= First post 
+:hp-tags: test 
+
+So this promises me to do blog posts in asciidoctor over javascript. With preview! 
+
+Looks fairly nice, I'll just have to figure out the correct keyboard for the times when I want to enter some code. 
+
+[source, clojure] 
+----
+(map inc [1 5 7 4])
+----
+
+only if we had better syntax highlighting. 
