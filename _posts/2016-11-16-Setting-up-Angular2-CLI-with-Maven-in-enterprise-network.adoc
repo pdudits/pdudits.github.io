@@ -22,9 +22,9 @@ We will lay out our modules in following way:
 
 ----
 parent (pom)
-`- app-backend (war module)
-`- app-frontend (war module)
-   `- node (js project)
+\_ app-backend (war module)
+\_ app-frontend (war module)
+    \_ node (js project)
 ----
 
 Module `app-frontend` will invoke npm build in directory `app-frontend/node`. I tried to be Maven compatible here at first, but it wasn't really helping when trying to open the JS project in the IDE. Maven will then pack the result of npm into a `.war` file.
