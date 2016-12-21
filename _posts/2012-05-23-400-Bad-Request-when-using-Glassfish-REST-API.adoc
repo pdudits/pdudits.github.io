@@ -1,6 +1,7 @@
 = 400 Bad Request when using Glassfish REST API
 :published_at: 2012-05-23
 :hp-tags: Glassfish
+:hp-image: https://cloud.githubusercontent.com/assets/1588543/21372743/74efeca4-c719-11e6-9c26-58a5f7b20a71.jpg
 
 When you try to automate your Glassfish administration duties with its REST API using POST or DELETE methods, and all you get is HTTP response 400 and zero content, you forgot to read http://docs.oracle.com/cd/E26576_01/doc.312/e24928/general-administration.htm#GSADG00708[this:]
 
