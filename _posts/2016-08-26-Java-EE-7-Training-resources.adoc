@@ -1,0 +1,162 @@
+# Java EE 7 Training resources
+:published_at: 2016-08-26
+:hp-tags: Java EE
+
+I've done a training with two-day Java EE overview. This is annotated browser history of the things I showed.
+
+At the training we followed book http://www.apress.com/9781430246268[Beginning Java EE 7] from https://antoniogoncalves.org/[Antonio Goncalves].
+
+[[the-code]]
+The code
+~~~~~~~~
+
+We followed https://github.com/agoncal/agoncal-book-javaee7[code samples
+from the book] troughout the training.
+
+[[other-general-resources]]
+Other general resources
+~~~~~~~~~~~~~~~~~~~~~~~
+
+http://docs.oracle.com/javaee/7/api/index.html[Java EE 7 javadoc] lists
+all of the relevant APIs defined by Java EE spec.
+
+Adam Bien’s book http://realworldpatterns.com/[Real World Java EE
+Patterns – Rethinking Best Practices] will help you put EJB and CDI in
+practice.
+
+https://github.com/javaee-samples/javaee7-samples[Java EE 7 samples]
+demonstrates Java EE 7 features in Arquillian-based tests.
+
+http://arquillian.org/[Arquillian] helps testing parts of your Java EE
+applications within container - be it just Weld, embedded Payara or
+remote standalone servers.
+
+[[cdi]]
+CDI
+~~~
+
+Read http://docs.jboss.org/weld/reference/latest/en-US/html/[Weld
+Reference Documentation] for in-depth details about all CDI features.
+
+https://deltaspike.apache.org/[Apache Deltaspike] is collection of CDI
+extensions covering various infrastructure aspects of your application.
+
+[[jpa]]
+JPA
+~~~
+
+For in-depth look into JPA, design of the entities and trade-offs of the
+features, read http://www.apress.com/9781430219569[Pro JPA 2] by Mike
+Keith and Merrick Schincariol.
+
+Another great source of JPA knowledge is https://vladmihalcea.com/[Vlad
+Mihalcea].
+
+Instead of Criteria API, consider using
+http://www.querydsl.com/[QueryDSL].
+
+For managing of database schema I recommend
+https://flywaydb.org/[FlyWay].
+
+[[security]]
+Security
+~~~~~~~~
+
+Ultimate source on JAAS and JASPIC is
+http://arjan-tijms.omnifaces.org/[Arjan Tijms] (and also for JSF and
+OmniFaces).
+
+[[transactions]]
+Transactions
+~~~~~~~~~~~~
+
+To understand cases, where distributed transactions are not a good
+choice, read
+http://www.enterpriseintegrationpatterns.com/docs/IEEE_Software_Design_2PC.pdf[Your
+Coffee Shop Doesn’t +
+Use Two-Phase Commit] by Gregor Hohpe.
+
+Also good source for understanding distributed systems, that usually
+reach outside scope of Java EE, look at
+http://book.mixu.net/distsys/single-page.html[Distributed Systems for
+Fun and Profit] by Mikito Takada.
+
+[[messaging]]
+Messaging
+~~~~~~~~~
+
+Even though Java Serialization is very comfortable, for high performance
+systems consider https://github.com/eishay/jvm-serializers/wiki[other
+serialization libraries] that might give you smaller payloads, less CPU
+usage, and better interface evolution options.
+
+For building business processes based on message passing you may want to
+read
+https://books.google.sk/books/about/Enterprise_Integration_Patterns.html?id=qqB7nrrna_sC&source=kp_cover&redir_esc=y[Enterprise
+Integration Patterns] by Gregor Hohpe (yes, the one of the coffee shop
+article).
+
+[[rest]]
+REST
+~~~~
+
+The origin of the term is in
+https://www.ics.uci.edu/~fielding/pubs/dissertation/fielding_dissertation.pdf[Roy
+Fieldings’ disertation], where it says it’s not just about HTTP, but
+also http://olivergierke.de/2016/04/benefits-of-hypermedia/[about
+hypermedia].
+
+Serialization frameworks from above may also be a good option for
+message exchange over REST.
+
+
+[[jsf]]
+JSF
+~~~
+
+I think no JSF app can survive without
+http://www.primefaces.org/[PrimeFaces] and
+http://showcase.omnifaces.org/[OmniFaces]. And the
+https://www.amazon.com/dp/1908689293[book explaining OmniFaces and
+therefore JSF].
+
+[[application-servers]]
+Application Servers
+~~~~~~~~~~~~~~~~~~~
+
+* http://www.payara.fish/[Payara] - maintained fork of deceased platform
+reference implementation https://glassfish.java.net/[Glassfish]. See
+also http://docs.oracle.com/cd/E26576_01/index.htm[Glassfish
+Documentation] and
+https://payara.gitbooks.io/payara-server/content[Payara Documentation]
+* http://wildfly.org/[Wildfly] - open source variant of
+http://developers.redhat.com/products/eap/download/[JBoss EAP 7]. See
+also
+https://docs.jboss.org/author/display/WFLY10/Developer+Guide[Development
+guide] for server specifics.
+* http://tomee.apache.org/apache-tomee.html[TomEE] Java EE _6_
+application server built on top of Tomcat from Tomcat maintainers
+* https://developer.ibm.com/wasdev/websphere-liberty/[WebShpere Liberty]
+free version of WebShere with heap limit 2GB (total over all instances)
+
+http://www.oracle.com/technetwork/java/javaee/overview/compatibility-jsp-136984.html[Full
+listing of certified servers]
+
+[[standards-specifications]]
+Standards’ specifications
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All Java EE specifications are governed by http://jcp.org[Java Comunity
+Process] as Java Speficication Requests (JSRs). The list of Java EE 7
+JSR with links to spec downloads is available
+http://www.oracle.com/technetwork/java/javaee/tech/index-jsp-142185.html[at
+Oracle’s site]
+
+[[misc]]
+Misc
+~~~~
+
+At heart of every server there is bytecode manipulation library like
+http://asm.ow2.org/[ASM]. Other good use cases are writing tests, that
+verify correctness of the code (e. g. security check is invoked in every
+method).
