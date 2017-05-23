@@ -79,6 +79,8 @@ Opening kubernetes dashboard in default browser...
 
 image::https://cloud.githubusercontent.com/assets/1588543/26376434/c2301036-400c-11e7-8a3f-7c1a249a8624.png[]
 
+== Deploy Payara
+
 
 
 
