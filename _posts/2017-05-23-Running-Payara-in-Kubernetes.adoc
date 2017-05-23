@@ -1,0 +1,87 @@
+= Running Payara in Kubernetes
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+// :published_at: 2019-01-31
+:hp-tags: Payara, Kubernetes,
+// :hp-alt-title: My English Title
+
+In the first part of hopefully longer series I will focus at the tasks one should do to get plain server -- without the app, but a Java EE full profile one -- up and running in Kubernetes cluster.
+
+== Installing the tools
+
+For this series I will be using my Windows 10 Home notebook. Particulary important consequence of that is, that Hyper-V https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v#check-requirements[is not availble]. I will therefore use VirtualBox.
+
+=== Step 1: Install VirtualBox
+There's not much to be said to this one, just head over to https://www.virtualbox.org/wiki/Downloads[VirtualBox download page], download and install.
+
+=== Step 2: Install Kubernetes
+Kubernetes is a tool for (virtual machine) clusters. However, you can run it all in single virtual machine on your computer! To achieve that you'll need:
+
+* https://github.com/kubernetes/minikube#user-content-quickstart[minikube]: the management tool for the vm.
+  Download https://storage.googleapis.com/minikube/releases/latest/minikube-windows-amd64.exe[minikube-windows-amd64.exe], put it in a dedicated folder for your kubernetes tools, and rename it to minikube.exe
+
+* https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-binary-via-curl[kubectl]: CLI tool for interacting with Kubernetes. They have fancy bash{nbsp}&{nbsp}curl script for downloading the current release, I'm pretty sure it's almost of no use for you, the Windows guy. Here's bit of PowerShell instead:
++
+----
+$(
+  $base = "https://storage.googleapis.com/kubernetes-release/release";
+  $ver = iwr "$base/stable.txt" | % { $_.Content.Trim() };
+  "$base/$ver"
+) | % {
+  iwr "$_/bin/windows/amd64/kubectl.exe" -OutFile kubectl.exe
+}
+----
+
+== Create and run the cluster
+
+We're just few commands away from running the cluster now.
+
+=== Step 3: Prepare Environment vars
+
+On typical home machine, you don't need to set any variables. However, on "enterprise" one you might consider:
+
+----
+:: We will download some ISOs now
+SET https_proxy=http://proxy.company.local:8080
+:: Into directory %MINIKUBE_HOME%\.minikube, defaults to %HOMEPATH%.
+:: Also a vm disk image gets created there
+:: it also fails if you're not running minikube on your HOMEDRIVE
+SET MINIKUBE_HOME=d:\src\kubernetes
+----
+
+=== Step 4: Create cluster
+
+----
+d:\src\kubernetes>minikube start --vm-driver=virtualbox
+Starting local Kubernetes v1.6.0 cluster...
+Starting VM...
+Downloading Minikube ISO
+ 89.51 MB / 89.51 MB [==============================================] 100.00% 0s
+SSH-ing files into VM...
+Setting up certs...
+Starting cluster components...
+Connecting to cluster...
+Setting up kubeconfig...
+Kubectl is now configured to use the cluster.
+----
+
+You can see virtual machine _minikube_ running in VirtualBox now. Let's check, that it indeed works:
+
+----
+d:\src\kubernetes>kubectl cluster-info
+Kubernetes master is running at https://192.168.99.100:8443
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+d:\src\kubernetes>minikube dashboard
+Opening kubernetes dashboard in default browser...
+----
+
+image::https://cloud.githubusercontent.com/assets/1588543/26376434/c2301036-400c-11e7-8a3f-7c1a249a8624.png[]
+
+
+
+
+
+
+
