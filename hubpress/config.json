@@ -2,7 +2,8 @@
   "meta": {
     "username": "pdudits",
     "repositoryName": "pdudits.github.io",
-    "branch": "master"
+    "branch": "master",
+    "cname": ""
   },
   "site": {
     "title": "Not obvious ",
@@ -10,15 +11,39 @@
     "logo": "https://twitter.com/pdudits/profile_image?size=bigger",
     "cover": "https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg",
     "googleAnalytics": "UA-340613-5",
-    "disqus": "pdudits"
+    "disqus": "pdudits",
+    "delay": "",
+    "postsPerPage": ""
   },
   "socialnetwork": {
     "twitter": "https://twitter.com/pdudits",
     "facebook": "https://facebook.com/patrik.dudits",
     "flickr": "https://flickr.com/pdudits",
-    "github": "https://github.com/pdudits"
+    "github": "https://github.com/pdudits",
+    "email": "",
+    "googleplus": "",
+    "instagram": "",
+    "pinterest": "",
+    "linkedin": "",
+    "stackoverflow": ""
   },
   "theme": {
-    "name": "saga"
+    "name": "uno-zen"
+  },
+  "urls": {
+    "site": "https://pdudits.github.io",
+    "hubpress": "https://pdudits.github.io",
+    "theme": "//pdudits.github.io/themes/saga",
+    "images": "https://pdudits.github.io/images"
+  },
+  "initialisationConfigComponent": {
+    "name": "initialise-configuration",
+    "computed": {},
+    "methods": {},
+    "staticRenderFns": [
+      null,
+      null,
+      null
+    ]
   }
 }
