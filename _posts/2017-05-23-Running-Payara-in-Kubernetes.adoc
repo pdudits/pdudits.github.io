@@ -81,6 +81,48 @@ image::https://cloud.githubusercontent.com/assets/1588543/26376434/c2301036-400c
 
 == Deploy Payara
 
+
+=== Step 5: Create deployment
+
+Bare deployment of Payara inside cluster can be achieved with
+
+----
+> kubectl run payara --image=payara/server-full --port=8080 --replicas 1
+deployment "payara" created
+----
+This starts download of a docker image and creates a https://kubernetes.io/docs/concepts/workloads/controllers/deployment/[Deployment]
+and a https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/[Replica Set], that in turn contains single https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/[Pod], that exposes standard HTTP port. It will take a while, since the docker image needs to be downloaded. You can monitor the progress like this:
+
+----
+> kubectl get events
+LASTSEEN   FIRSTSEEN   COUNT     NAME                      KIND         SUBOBJECT                 TYPE      REASON              SOURCE                  MESSAGE
+6m         6m          1         payara-4223602339-vr5w5   Pod                                    Normal    Scheduled           default-scheduler       Successfully assigned payara-4223602339-vr5w5 to minikube
+6m         6m          1         payara-4223602339-vr5w5   Pod          spec.containers{payara}   Normal    Pulling             kubelet, minikube       pulling image "payara/server-full"
+6m         6m          1         payara-4223602339         ReplicaSet                             Normal    SuccessfulCreate    replicaset-controller   Created pod: payara-4223602339-vr5w5
+6m         6m          1         payara                    Deployment                             Normal    ScalingReplicaSet   deployment-controller   Scaled up replica set payara-4223602339 to 1
+----
+Alternatively you can use `minikube dashboard` for more interactive view.
+
+=== Step 6: Expose HTTP port
+After the replica set is running, you yet need to make it accessible from within container inside minikube VM to your host:
+
+----
+> kubectl expose deployment payara --port=80 --type=NodePort
+service "payara" exposed
+> minikube service payara
+Opening kubernetes service default/payara in default browser...
+----
+
+image::https://cloud.githubusercontent.com/assets/1588543/26421598/e607bc24-40c6-11e7-80b7-a4ea7b632e3a.png[]
+
+Six steps are already enough for a nice evening spent at your computer, in next part of the series we'll try to http://imgur.com/gallery/RadSf[draw the rest of the owl]:
+
+* Deploying the app into server, ideally without every build result being 800MB
+* Improving logging
+* Customizing your domain
+* ...
+
+Stay tuned!
 
 
 
