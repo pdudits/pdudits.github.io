@@ -28,12 +28,12 @@
     "stackoverflow": ""
   },
   "theme": {
-    "name": "uno"
+    "name": "uno-zen"
   },
   "urls": {
     "site": "https://pdudits.github.io",
     "hubpress": "https://pdudits.github.io",
-    "theme": "//pdudits.github.io/themes/uno-zen",
+    "theme": "//pdudits.github.io/themes/uno",
     "images": "https://pdudits.github.io/images"
   },
   "initialisationConfigComponent": {
