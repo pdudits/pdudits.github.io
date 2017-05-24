@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Running Payara in Kubernetes</title>
+    <meta name="description" content="" />
+    <link href="//fonts.googleapis.com/css?family=Noto+Sans:300,400,700" rel="stylesheet" type="text/css">
+    <link href="//fonts.googleapis.com/css?family=Noto+Serif:400,700,400italic" rel="stylesheet" type="text/css">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+    <link href="//pdudits.github.io/themes/saga/assets/css/style.css?v=1495654103764" rel="stylesheet" type="text/css">
+    <link href="//pdudits.github.io/themes/saga/assets/css/animate.min.css?v=1495654103764" rel="stylesheet" type="text/css">
+    <link href="https://pdudits.github.io/favicon.ico" rel="shortcut icon">
+    <link rel="canonical" href="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html" />
+    <meta name="referrer" content="origin" />
+    
+    <meta property="og:site_name" content="Not obvious " />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Running Payara in Kubernetes" />
+    <meta property="og:description" content="In the first part of hopefully longer series I will focus at the tasks one should do to get plain server&amp;#8201;&amp;#8212;&amp;#8201;without the app, but a Java EE full profile one&amp;#8201;&amp;#8212;&amp;#8201;up and running in Kubernetes cluster. Installing the tools For this series I" />
+    <meta property="og:url" content="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html" />
+    <meta property="article:published_time" content="2017-05-23T00:00:00.000Z" />
+    <meta property="article:tag" content="Payara" />
+    <meta property="article:tag" content="Kubernetes" />
+    
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Running Payara in Kubernetes" />
+    <meta name="twitter:description" content="In the first part of hopefully longer series I will focus at the tasks one should do to get plain server&amp;#8201;&amp;#8212;&amp;#8201;without the app, but a Java EE full profile one&amp;#8201;&amp;#8212;&amp;#8201;up and running in Kubernetes cluster. Installing the tools For this series I" />
+    <meta name="twitter:url" content="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html" />
+    
+    <script type="application/ld+json">
+{
+    "@context": "http://schema.org",
+    "@type": "Article",
+    "publisher": "Not obvious ",
+    "author": {
+        "@type": "Person",
+        "name": "Patrik Duditš",
+        "image": "https://avatars0.githubusercontent.com/u/1588543?v=3",
+        "url": "https://pdudits.github.io/author/pdudits/"
+    },
+    "headline": "Running Payara in Kubernetes",
+    "url": "https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html",
+    "datePublished": "2017-05-23T00:00:00.000Z",
+    "keywords": "Payara, Kubernetes",
+    "description": "In the first part of hopefully longer series I will focus at the tasks one should do to get plain server&amp;#8201;&amp;#8212;&amp;#8201;without the app, but a Java EE full profile one&amp;#8201;&amp;#8212;&amp;#8201;up and running in Kubernetes cluster. Installing the tools For this series I"
+}
+    </script>
+
+    <meta name="generator" content="HubPress" />
+    <link rel="alternate" type="application/rss+xml" title="Not obvious " href="https://pdudits.github.io/rss/" />
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.10.0/styles/atom-one-dark.min.css">
+</head>
+<body class="post-template tag-Payara tag-Kubernetes">
+    <header id="header" class="animated fadeIn">
+    <div class="header-background">
+    <section class="blog-content">
+        <a id="site-url" class="blog-title" href="https://pdudits.github.io">Not obvious </a>
+        <span class="blog-description">Notes about programming tasks that took too long. By Patrik Duditš. </span>
+        <nav class="links fadeIn animated">
+            <ul>
+                <li class="rss"><a title="RSS Feed" href="/rss/"><i class="fa fa-fw fa-rss-square"></i></a></li>
+        
+            </ul>
+        </nav>
+    </section>
+    <section class="header-content">
+        <h1 class="post-title animated fadeInUp">Running Payara in Kubernetes</h1>
+        <span class="post-data"><span class="date animated fadeInUp"><i class="fa fa-clock-o"></i> <time class="timesince date" data-timesince="1495490400" datetime="2017-05-23T00:00" title="23 May 2017">2 days ago</time></span>
+            <span class="tags animated fadeInUp"><i class="fa fa-tags"></i> <a href="https://pdudits.github.io/tag/Payara/">Payara</a>, <a href="https://pdudits.github.io/tag/Kubernetes/">Kubernetes</a></span>
+            <span class="author animated fadeInUp"><i class="fa fa-user"></i> <a href="https://pdudits.github.io/author/pdudits/">Patrik Duditš</a></span></span>
+    </section>
+    </div>
+</header>
+<main id="main" class="content">
+    <article itemtype="http://schema.org/BlogPosting" class="animated fadeIn content post post tag-Payara tag-Kubernetes">
+        <section class="post-content">
+            <div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the first part of hopefully longer series I will focus at the tasks one should do to get plain server&#8201;&#8212;&#8201;without the app, but a Java EE full profile one&#8201;&#8212;&#8201;up and running in Kubernetes cluster.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_installing_the_tools">Installing the tools</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For this series I will be using my Windows 10 Home notebook. Particulary important consequence of that is, that Hyper-V <a href="https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v#check-requirements">is not availble</a>. I will therefore use VirtualBox.</p>
+</div>
+<div class="sect2">
+<h3 id="_step_1_install_virtualbox">Step 1: Install VirtualBox</h3>
+<div class="paragraph">
+<p>There&#8217;s not much to be said to this one, just head over to <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox download page</a>, download and install.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_2_install_kubernetes">Step 2: Install Kubernetes</h3>
+<div class="paragraph">
+<p>Kubernetes is a tool for (virtual machine) clusters. However, you can run it all in single virtual machine on your computer! To achieve that you&#8217;ll need:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/kubernetes/minikube#user-content-quickstart">minikube</a>: the management tool for the vm.
+Download <a href="https://storage.googleapis.com/minikube/releases/latest/minikube-windows-amd64.exe">minikube-windows-amd64.exe</a>, put it in a dedicated folder for your kubernetes tools, and rename it to minikube.exe</p>
+</li>
+<li>
+<p><a href="https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-binary-via-curl">kubectl</a>: CLI tool for interacting with Kubernetes. They have fancy bash&#160;&amp;&#160;curl script for downloading the current release, I&#8217;m pretty sure it&#8217;s almost of no use for you, the Windows guy. Here&#8217;s bit of PowerShell instead:</p>
+<div class="listingblock">
+<div class="content">
+<pre>$(
+  $base = "https://storage.googleapis.com/kubernetes-release/release";
+  $ver = iwr "$base/stable.txt" | % { $_.Content.Trim() };
+  "$base/$ver"
+) | % {
+  iwr "$_/bin/windows/amd64/kubectl.exe" -OutFile kubectl.exe
+}</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_create_and_run_the_cluster">Create and run the cluster</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We&#8217;re just few commands away from running the cluster now.</p>
+</div>
+<div class="sect2">
+<h3 id="_step_3_prepare_environment_vars">Step 3: Prepare Environment vars</h3>
+<div class="paragraph">
+<p>On typical home machine, you don&#8217;t need to set any variables. However, on "enterprise" one you might consider:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>:: We will download some ISOs now
+SET https_proxy=http://proxy.company.local:8080
+:: Into directory %MINIKUBE_HOME%\.minikube, defaults to %HOMEPATH%.
+:: Also a vm disk image gets created there
+:: it also fails if you're not running minikube on your HOMEDRIVE
+SET MINIKUBE_HOME=d:\src\kubernetes</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_4_create_cluster">Step 4: Create cluster</h3>
+<div class="listingblock">
+<div class="content">
+<pre>d:\src\kubernetes&gt;minikube start --vm-driver=virtualbox
+Starting local Kubernetes v1.6.0 cluster...
+Starting VM...
+Downloading Minikube ISO
+ 89.51 MB / 89.51 MB [==============================================] 100.00% 0s
+SSH-ing files into VM...
+Setting up certs...
+Starting cluster components...
+Connecting to cluster...
+Setting up kubeconfig...
+Kubectl is now configured to use the cluster.</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can see virtual machine <em>minikube</em> running in VirtualBox now. Let&#8217;s check, that it indeed works:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>d:\src\kubernetes&gt;kubectl cluster-info
+Kubernetes master is running at https://192.168.99.100:8443
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+d:\src\kubernetes&gt;minikube dashboard
+Opening kubernetes dashboard in default browser...</pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="https://cloud.githubusercontent.com/assets/1588543/26376434/c2301036-400c-11e7-8a3f-7c1a249a8624.png" alt="c2301036 400c 11e7 8a3f 7c1a249a8624.png">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deploy_payara">Deploy Payara</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_step_5_create_deployment">Step 5: Create deployment</h3>
+<div class="paragraph">
+<p>Bare deployment of Payara inside cluster can be achieved with</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl run payara --image=payara/server-full --port=8080 --replicas 1
+deployment "payara" created</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This starts download of a docker image and creates a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/">Deployment</a>
+and a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/">Replica Set</a>, that in turn contains single <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/">Pod</a>, that exposes standard HTTP port. It will take a while, since the docker image needs to be downloaded. You can monitor the progress like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl get events
+LASTSEEN   FIRSTSEEN   COUNT     NAME                      KIND         SUBOBJECT                 TYPE      REASON              SOURCE                  MESSAGE
+6m         6m          1         payara-4223602339-vr5w5   Pod                                    Normal    Scheduled           default-scheduler       Successfully assigned payara-4223602339-vr5w5 to minikube
+6m         6m          1         payara-4223602339-vr5w5   Pod          spec.containers{payara}   Normal    Pulling             kubelet, minikube       pulling image "payara/server-full"
+6m         6m          1         payara-4223602339         ReplicaSet                             Normal    SuccessfulCreate    replicaset-controller   Created pod: payara-4223602339-vr5w5
+6m         6m          1         payara                    Deployment                             Normal    ScalingReplicaSet   deployment-controller   Scaled up replica set payara-4223602339 to 1</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Alternatively you can use <code>minikube dashboard</code> for more interactive view.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_6_expose_http_port">Step 6: Expose HTTP port</h3>
+<div class="paragraph">
+<p>After the replica set is running, you yet need to make it accessible from within container inside minikube VM to your host:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl expose deployment payara --port=80 --type=NodePort
+service "payara" exposed
+&gt; minikube service payara
+Opening kubernetes service default/payara in default browser...</pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="https://cloud.githubusercontent.com/assets/1588543/26421598/e607bc24-40c6-11e7-80b7-a4ea7b632e3a.png" alt="e607bc24 40c6 11e7 80b7 a4ea7b632e3a.png">
+</div>
+</div>
+<div class="paragraph">
+<p>Six steps are already enough for a nice evening spent at your computer, in next part of the series we&#8217;ll try to <a href="http://imgur.com/gallery/RadSf">draw the rest of the owl</a>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Deploying the app into server, ideally without every build result being 800MB</p>
+</li>
+<li>
+<p>Improving logging</p>
+</li>
+<li>
+<p>Customizing your domain</p>
+</li>
+<li>
+<p>&#8230;&#8203;</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Stay tuned!
+</p>
+</div>
+</div>
+</div>
+</div>
+        </section>
+
+    
+        <section class="post-comments">
+          <div id="disqus_thread"></div>
+          <script type="text/javascript">
+          var disqus_shortname = 'pdudits'; // required: replace example with your forum shortname
+          /* * * DON'T EDIT BELOW THIS LINE * * */
+          (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+          <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        </section>
+    
+    </article>
+
+</main>
+    <footer class="animated fadeIn" id="footer">
+        <section class="colophon">
+          <section class="copyright">Copyright &copy; <span itemprop="copyrightHolder">Not obvious </span>. <span rel="license">All Rights Reserved</span>.</section>
+          <section class="poweredby">Published with <a class="icon-ghost" href="http://hubpress.io">HubPress</a></section>
+        </section>
+        <section class="bottom">
+          <section class="attribution">
+            <a href="http://github.com/Reedyn/Saga">Built with <i class="fa fa-heart"></i> and Free and Open-Source Software</a>.
+          </section>
+        </section>
+    </footer>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js?v="></script> <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.min.js?v="></script> <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.10.0/highlight.min.js?v="></script> 
+      <script type="text/javascript">
+        jQuery( document ).ready(function() {
+          // change date with ago
+          jQuery('ago.ago').each(function(){
+            var element = jQuery(this).parent();
+            element.html( moment(element.text()).fromNow());
+          });
+        });
+
+        hljs.initHighlightingOnLoad();
+      </script>
+       
+    <script src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
+    <script src="//pdudits.github.io/themes/saga/assets/js/scripts.js?v=1495654103764"></script>
+    
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-340613-5', 'auto');
+    ga('send', 'pageview');
+
+    </script>
+</body>
+</html>

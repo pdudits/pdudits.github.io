@@ -1,4 +1,189 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Thu, 22 Dec 2016 06:45:43 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Setting up Angular2 CLI with Maven in enterprise network]]></title><description><![CDATA[<div id="preamble">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 24 May 2017 19:28:23 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Running Payara in Kubernetes]]></title><description><![CDATA[<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the first part of hopefully longer series I will focus at the tasks one should do to get plain server&#8201;&#8212;&#8201;without the app, but a Java EE full profile one&#8201;&#8212;&#8201;up and running in Kubernetes cluster.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_installing_the_tools">Installing the tools</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For this series I will be using my Windows 10 Home notebook. Particulary important consequence of that is, that Hyper-V <a href="https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v#check-requirements">is not availble</a>. I will therefore use VirtualBox.</p>
+</div>
+<div class="sect2">
+<h3 id="_step_1_install_virtualbox">Step 1: Install VirtualBox</h3>
+<div class="paragraph">
+<p>There&#8217;s not much to be said to this one, just head over to <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox download page</a>, download and install.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_2_install_kubernetes">Step 2: Install Kubernetes</h3>
+<div class="paragraph">
+<p>Kubernetes is a tool for (virtual machine) clusters. However, you can run it all in single virtual machine on your computer! To achieve that you&#8217;ll need:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/kubernetes/minikube#user-content-quickstart">minikube</a>: the management tool for the vm.
+Download <a href="https://storage.googleapis.com/minikube/releases/latest/minikube-windows-amd64.exe">minikube-windows-amd64.exe</a>, put it in a dedicated folder for your kubernetes tools, and rename it to minikube.exe</p>
+</li>
+<li>
+<p><a href="https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-binary-via-curl">kubectl</a>: CLI tool for interacting with Kubernetes. They have fancy bash&#160;&amp;&#160;curl script for downloading the current release, I&#8217;m pretty sure it&#8217;s almost of no use for you, the Windows guy. Here&#8217;s bit of PowerShell instead:</p>
+<div class="listingblock">
+<div class="content">
+<pre>$(
+  $base = "https://storage.googleapis.com/kubernetes-release/release";
+  $ver = iwr "$base/stable.txt" | % { $_.Content.Trim() };
+  "$base/$ver"
+) | % {
+  iwr "$_/bin/windows/amd64/kubectl.exe" -OutFile kubectl.exe
+}</pre>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_create_and_run_the_cluster">Create and run the cluster</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We&#8217;re just few commands away from running the cluster now.</p>
+</div>
+<div class="sect2">
+<h3 id="_step_3_prepare_environment_vars">Step 3: Prepare Environment vars</h3>
+<div class="paragraph">
+<p>On typical home machine, you don&#8217;t need to set any variables. However, on "enterprise" one you might consider:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>:: We will download some ISOs now
+SET https_proxy=http://proxy.company.local:8080
+:: Into directory %MINIKUBE_HOME%\.minikube, defaults to %HOMEPATH%.
+:: Also a vm disk image gets created there
+:: it also fails if you're not running minikube on your HOMEDRIVE
+SET MINIKUBE_HOME=d:\src\kubernetes</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_4_create_cluster">Step 4: Create cluster</h3>
+<div class="listingblock">
+<div class="content">
+<pre>d:\src\kubernetes&gt;minikube start --vm-driver=virtualbox
+Starting local Kubernetes v1.6.0 cluster...
+Starting VM...
+Downloading Minikube ISO
+ 89.51 MB / 89.51 MB [==============================================] 100.00% 0s
+SSH-ing files into VM...
+Setting up certs...
+Starting cluster components...
+Connecting to cluster...
+Setting up kubeconfig...
+Kubectl is now configured to use the cluster.</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can see virtual machine <em>minikube</em> running in VirtualBox now. Let&#8217;s check, that it indeed works:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>d:\src\kubernetes&gt;kubectl cluster-info
+Kubernetes master is running at https://192.168.99.100:8443
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+d:\src\kubernetes&gt;minikube dashboard
+Opening kubernetes dashboard in default browser...</pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="https://cloud.githubusercontent.com/assets/1588543/26376434/c2301036-400c-11e7-8a3f-7c1a249a8624.png" alt="c2301036 400c 11e7 8a3f 7c1a249a8624.png">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deploy_payara">Deploy Payara</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_step_5_create_deployment">Step 5: Create deployment</h3>
+<div class="paragraph">
+<p>Bare deployment of Payara inside cluster can be achieved with</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl run payara --image=payara/server-full --port=8080 --replicas 1
+deployment "payara" created</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This starts download of a docker image and creates a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/">Deployment</a>
+and a <a href="https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/">Replica Set</a>, that in turn contains single <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/">Pod</a>, that exposes standard HTTP port. It will take a while, since the docker image needs to be downloaded. You can monitor the progress like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl get events
+LASTSEEN   FIRSTSEEN   COUNT     NAME                      KIND         SUBOBJECT                 TYPE      REASON              SOURCE                  MESSAGE
+6m         6m          1         payara-4223602339-vr5w5   Pod                                    Normal    Scheduled           default-scheduler       Successfully assigned payara-4223602339-vr5w5 to minikube
+6m         6m          1         payara-4223602339-vr5w5   Pod          spec.containers{payara}   Normal    Pulling             kubelet, minikube       pulling image "payara/server-full"
+6m         6m          1         payara-4223602339         ReplicaSet                             Normal    SuccessfulCreate    replicaset-controller   Created pod: payara-4223602339-vr5w5
+6m         6m          1         payara                    Deployment                             Normal    ScalingReplicaSet   deployment-controller   Scaled up replica set payara-4223602339 to 1</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Alternatively you can use <code>minikube dashboard</code> for more interactive view.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_step_6_expose_http_port">Step 6: Expose HTTP port</h3>
+<div class="paragraph">
+<p>After the replica set is running, you yet need to make it accessible from within container inside minikube VM to your host:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; kubectl expose deployment payara --port=80 --type=NodePort
+service "payara" exposed
+&gt; minikube service payara
+Opening kubernetes service default/payara in default browser...</pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="https://cloud.githubusercontent.com/assets/1588543/26421598/e607bc24-40c6-11e7-80b7-a4ea7b632e3a.png" alt="e607bc24 40c6 11e7 80b7 a4ea7b632e3a.png">
+</div>
+</div>
+<div class="paragraph">
+<p>Six steps are already enough for a nice evening spent at your computer, in next part of the series we&#8217;ll try to <a href="http://imgur.com/gallery/RadSf">draw the rest of the owl</a>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Deploying the app into server, ideally without every build result being 800MB</p>
+</li>
+<li>
+<p>Improving logging</p>
+</li>
+<li>
+<p>Customizing your domain</p>
+</li>
+<li>
+<p>&#8230;&#8203;</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Stay tuned!
+</p>
+</div>
+</div>
+</div>
+</div>]]></description><link>https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html</link><guid isPermaLink="true">https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html</guid><category><![CDATA[Payara]]></category><category><![CDATA[Kubernetes]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Tue, 23 May 2017 00:00:00 GMT</pubDate></item><item><title><![CDATA[Setting up Angular2 CLI with Maven in enterprise network]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>Working with Angular2 CLI is easy - you just wait for npm to download the Internet and afterwards and then <code>ng</code> will take care of all your tooling setup.</p>
