@@ -33,7 +33,7 @@
   "urls": {
     "site": "https://pdudits.github.io",
     "hubpress": "https://pdudits.github.io",
-    "theme": "//pdudits.github.io/themes/uno",
+    "theme": "//pdudits.github.io/themes/uno-zen",
     "images": "https://pdudits.github.io/images"
   },
   "initialisationConfigComponent": {
