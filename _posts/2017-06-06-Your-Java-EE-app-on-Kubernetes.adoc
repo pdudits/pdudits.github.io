@@ -1,0 +1,46 @@
+= Your Java EE app on Kubernetes
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+// :published_at: 2019-01-31
+// :hp-tags: HubPress, Blog, Open_Source,
+// :hp-alt-title: My English Title
+
+In https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html[previous  post] we managed to run Payara on Kubernetes. 
+This is if course bit dull without applicatinos deployed. 
+Let's see what we will need to have our app in Kubernetes as well:
+
+* .war Maven project
+* Fabric8 Maven plugin
+* Docker for Windows / Docker tools
+
+== Installing Docker tooling
+
+Given my hobby environment (Windows 10 Home), I cannot use the current Docker for Windows installation (remember, no HyperV in home edition). 
+Therefore I need to install https://www.docker.com/products/docker-toolbox[Docker Toolbox], its retired ancestor.
+
+== Sidecar approach
+I assume you don't upgrade your application server as often as you upgrade your applications. 
+But when you do upgrade your server, you shouldn't need to rebuild all of your applications. At least I wouldn't like to do that.
+
+Kubernetes gives you solution to that, called https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/#understanding-pods[Sidecar containers].
+Instead of running single image, you put multiple images together, and they can speak to each other via local host, or share directories.
+
+So we will take http://blog.payara.fish/payara-docker-images-162-release-update[Official Payara Docker Image], mount its autodeploy directory, and for our app we will build an image based on busybox, that will just copy our .war file to that folder.
+
+image::/images/Kubernetes%20sidecar.png[]
+
+The app-sidecar will be based on busybox, adding just 1MB of binaries to our app package.
+
+== Creating Docker images with Maven
+
+One doesn't leave its trusted tools for these fancy new tech!
+Everything you need to do concerning Docker images and Kubernetes you can achieve with https://maven.fabric8.io/[Fabric8 Maven Plugin].
+Fabric8 is entire deployment platform for Kubernetes, and I will surely look into it in next posts -- first, I need to understand what am I doing before I let magical tools do that for me ;).
+
+So this is what the `pom.xml` looks like:
+
+[source,xml]
+----
+include::https://github.com/pdudits/k8se9s/raw/master/payara-sidecar/pom.xml[]
+----
+
