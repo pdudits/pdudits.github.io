@@ -1,0 +1,59 @@
+= Installing Fabric8 on Azure Container Service
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+// :published_at: 2019-01-31
+// :hp-tags: HubPress, Blog, Open_Source,
+// :hp-alt-title: My English Title
+
+https://fabric8.io/[Fabric8] is great way of managing your entire clustered application's lifecycle, configuration, deployment.
+
+The easiest way to get started with openshift is to installl it in minikube, or use its commercial variant, the new generation of Openshift.
+
+These would be too obvious, and doesn't fit the blog title.
+I therefore decided to try it on Azure Container Service.
+That turned out to be far from obvious.
+
+== Creating Kubernetes cluster
+
+az acs ....
+
+Just four cores in trial - one master and one agent
+
+== Deploying fabric8
+
+Download gofabric8
+Start your cluster
+
+== File volumes
+
+Limit of 4 disks per VM.
+Therefore FIle service
+
+----
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: standard
+provisioner: kubernetes.io/azure-file
+parameters:
+  skuName: Standard_LRS
+  location: westeurope
+----
+
+gofabric8 volumes
+so it would add hostPath to the claims. These are needed for azure file storage
+
+== Ingress
+
+Expose the ingress service via loadbalancer
+Put IP into configMap
+
+== Scheduling on master
+
+kubectl uncordon
+
+== Insecure registry
+on both machines edit `/etc/docker/daemon.json`.
+
+
+  
