@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 21 Jun 2017 21:01:54 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 21 Jun 2017 21:07:21 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>In <a href="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html">previous  post</a> we managed to run Payara on Kubernetes.
@@ -28,8 +28,8 @@ We will use the full profile Payara, just to demonstrate, that microservices can
 <h2 id="_installing_docker_tooling">Installing Docker tooling</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Given my hobby environment (Windows 10 Home), I cannot use the current Docker for Windows installation (remember, no HyperV in Home edition).
-Therefore I need to install <a href="https://www.docker.com/products/docker-toolbox">Docker Toolbox</a>, its retired ancestor.</p>
+<p>Given my hobby environment (Windows 10 Home), I cannot use the current Docker for Windows installation&#8201;&#8212;&#8201;remember, there&#8217;s no HyperV in Home edition.
+We need to install <a href="https://www.docker.com/products/docker-toolbox">Docker Toolbox</a>, its retired ancestor.</p>
 </div>
 </div>
 </div>
@@ -71,7 +71,7 @@ So this is what the interesting parts of <a href="https://github.com/pdudits/k8s
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-xml" data-lang="xml">&lt;plugin&gt;
+<pre>&lt;plugin&gt;
     &lt;groupId&gt;io.fabric8&lt;/groupId&gt;
     &lt;artifactId&gt;fabric8-maven-plugin&lt;/artifactId&gt;
     &lt;version&gt;3.4.1&lt;/version&gt;
@@ -98,7 +98,7 @@ So this is what the interesting parts of <a href="https://github.com/pdudits/k8s
             &lt;/goals&gt;
         &lt;/execution&gt;
     &lt;/executions&gt;
-&lt;/plugin&gt;</code></pre>
+&lt;/plugin&gt;</pre>
 </div>
 </div>
 <div class="colist arabic">
