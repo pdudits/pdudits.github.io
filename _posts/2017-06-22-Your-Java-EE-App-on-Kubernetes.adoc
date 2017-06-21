@@ -15,8 +15,8 @@ Let's see what we will need to have our app in Kubernetes as well:
 
 == Installing Docker tooling
 
-Given my hobby environment (Windows 10 Home), I cannot use the current Docker for Windows installation (remember, no HyperV in Home edition). 
-Therefore I need to install https://www.docker.com/products/docker-toolbox[Docker Toolbox], its retired ancestor.
+Given my hobby environment (Windows 10 Home), I cannot use the current Docker for Windows installation -- remember, there's no HyperV in Home edition. 
+We need to install https://www.docker.com/products/docker-toolbox[Docker Toolbox], its retired ancestor.
 
 == Sidecar approach
 I assume you don't upgrade your application server as often as you upgrade your applications. 
@@ -40,7 +40,7 @@ Fabric8 is entire CI/CD pipeline for Kubernetes, and I will surely look into it 
 The goal `build` of Fabric8 plugin constructs the Docker image based on https://maven.fabric8.io/#image-configuration[image configuration].
 So this is what the interesting parts of https://github.com/pdudits/k8se9s/blob/master/payara-sidecar/pom.xml[`pom.xml`] look like:
 
-[source,xml]
+[source]
 ----
 include::https://raw.githubusercontent.com/pdudits/k8se9s/master/payara-sidecar/pom.xml[tags=fabric8,indent=0]
 ----
