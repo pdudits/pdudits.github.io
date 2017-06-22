@@ -3,7 +3,7 @@
 :hp-tags: Payara,Kubernetes
 
 In https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html[previous  post] we managed to run Payara on Kubernetes. 
-This is of course bit dull without applicatinos deployed. 
+This is of course bit dull without applications deployed. 
 Next we will create an actual aplication, that will deploy with official Payara container.
 We will use the full profile Payara, just to demonstrate, that microservices can be built using standard distribution.
 
