@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Wed, 21 Jun 2017 21:07:21 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Thu, 22 Jun 2017 07:26:07 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>In <a href="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html">previous  post</a> we managed to run Payara on Kubernetes.
-This is of course bit dull without applicatinos deployed.
+This is of course bit dull without applications deployed.
 Next we will create an actual aplication, that will deploy with official Payara container.
 We will use the full profile Payara, just to demonstrate, that microservices can be built using standard distribution.</p>
 </div>
@@ -322,7 +322,7 @@ deployment "payara" image updated</pre>
 <h2 id="_installing_the_tools">Installing the tools</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>For this series I will be using my Windows 10 Home notebook. Particulary important consequence of that is, that Hyper-V <a href="https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v#check-requirements">is not available</a>. I will therefore use VirtualBox.</p>
+<p>For this series I will be using my Windows 10 Home notebook. Particulary important consequence of that is, that Hyper-V <a href="https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/quick-start/enable-hyper-v#check-requirements">is not availble</a>. I will therefore use VirtualBox.</p>
 </div>
 <div class="sect2">
 <h3 id="_step_1_install_virtualbox">Step 1: Install VirtualBox</h3>
@@ -805,7 +805,7 @@ set PATH=node_modules\.bin;..\target\node;%PATH%</code></pre>
 </div>
 </div>
 </div>
-</div>]]></description><link>https://pdudits.github.io/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</link><guid isPermaLink="true">https://pdudits.github.io/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</guid><category><![CDATA[Maven]]></category><category><![CDATA[ Angular]]></category><category><![CDATA[ Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 16 Nov 2016 00:00:00 GMT</pubDate></item><item><title><![CDATA[Java EE 7 Training resources]]></title><description><![CDATA[<div id="preamble">
+</div>]]></description><link>https://pdudits.github.io/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</link><guid isPermaLink="true">https://pdudits.github.io/2016/11/16/Setting-up-Angular2-CLI-with-Maven-in-enterprise-network.html</guid><category><![CDATA[Maven]]></category><category><![CDATA[Angular]]></category><category><![CDATA[Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Wed, 16 Nov 2016 00:00:00 GMT</pubDate></item><item><title><![CDATA[Java EE 7 Training resources]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>I&#8217;ve done a training with two-day Java EE overview. This is annotated browser history of the things I showed.</p>
