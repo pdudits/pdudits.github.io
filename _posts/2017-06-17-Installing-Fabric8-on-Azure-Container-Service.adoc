@@ -6,28 +6,76 @@
 // :hp-alt-title: My English Title
 
 https://fabric8.io/[Fabric8] is great way of managing your entire clustered application's lifecycle, configuration, deployment.
+Fabric8 itself is quite complex Kubernetes deployment, so one learns much from exploring how it is built up.
 
-The easiest way to get started with openshift is to installl it in minikube, or use its commercial variant, the new generation of Openshift.
+The easiest way to get started with Fabric8 is to installl it in minikube, or use its commercial variant, the new generation of Openshift.
 
 These would be too obvious, and doesn't fit the blog title.
-I therefore decided to try it on Azure Container Service.
-That turned out to be far from obvious.
+I therefore decided to try it on Azure Container Service, that turned out to be far from obvious.
+Actually, it turned out to be impossible.
 
 == Creating Kubernetes cluster
 
-az acs ....
+Once you've got your azure account, install https://docs.microsoft.com/en-us/cli/azure/install-azure-cli[Azure CLI] and login with `az login`.
 
-Just four cores in trial - one master and one agent
+I didn't keep complete logs of everything I done, but here are at least the commands:
 
-== Deploying fabric8
+----
+:: Authenticate with azure
+az login
+:: Create resource group for the cluster
+az group create --location westeurope fabric8
+:: Create a cluster. Only one agent, because there is 4 CPU limit for trial account
+az acs create -g fabric8 -n fabric8 --orchestrator-type kubernetes --generate-ssh-keys --agent-count 1 --agent-vm-size Standard_D11_v2_Promo
+:: Set up context for kubectl
+az acs kubernetes get-credentials -g fabric8 -n fabric8
+:: verify
+kubectl get nodes
+:: enjoy the kubernetes dashboard
+kubectl proxy
+----
 
-Download gofabric8
-Start your cluster
+I used Azure trial account that has limit of 4 vCPUs.
+Therefore I created one master (2 CPUs) and one agent, that also has two cpus.
+Since we will run whole lot of processes, I decided to make master run the pods as well.
+To do that use `kubectl uncordon %MASTER_NODE%`.
 
-== File volumes
+== Deploying fabric8 resources
 
-Limit of 4 disks per VM.
-Therefore FIle service
+Quite comfortable way of deploying fabric8 is https://github.com/fabric8io/gofabric8/releases[gofabric8] -- console app that will create the necesary resources for you.
+
+----
+gofabric8 deploy
+----
+
+And it will start working, images get downloaded in your cluster, pods get started, ... and then crash, crash crash.
+
+== Persistent Storage
+
+This leads us to lesson on https://kubernetes.io/docs/concepts/storage/persistent-volumes/[Persistent Volumes].
+When you pod needs a persistent storage -- opposed to tepmorary storage like a shared directory for mutliple containers -- it will create a Persistent Volume Claim.
+The metadata of the claim are then matched against existing Storage Classes.
+The Sotrage Classes describe how to obtain the persistent volume, especially which provider to use.
+And finally, the Provider knows how to provide that storage and mount it in your pod's docker container.
+
+On Azure, you've got two options for cloud storage:
+* Azure Disk is a VHD in your blob storage
+* Azure File is a CIFS (Samba, Windows Server) Share.
+
+In your VM you can two AzureDisk per CPU, so a total of 4 in my case, and two are taken by the OS already.
+Fabric8 would need around 9 disks in total, therefore this is not usable.
+
+Azure File run is mounted as cifs share, and has its own set of limitations, that in the end make it also unusable.
+
+Basically, the article could end here. In June 2017 it is impossible to run Fabric8 on Azure (as a real cluster, where your nodes may die or be replaced). Let me know when that changes.
+
+But I learnt so much along the way!
+
+=== All about Azure File provider
+
+So how do I create an azure file provider? The documentations offers no configuration example.
+At the time of writing there is https://github.com/kubernetes/kubernetes/tree/5e2503e71fa51ae08fbbc90cc94e7d293709528e/examples/persistent-volume-provisioning#azure-file[example in kubernetes source code], that says the configuration is the same as of Azure Disk.
+Great, let's deploy this!
 
 ----
 kind: StorageClass
@@ -36,9 +84,62 @@ metadata:
   name: standard
 provisioner: kubernetes.io/azure-file
 parameters:
-  skuName: Standard_LRS
-  location: westeurope
+  storageAccount: fabric8data
 ----
+
+Except that your pods still doesn't start complaining that `no volume plugin matched`.
+
+The reason for this is, that there is no storage class `azure-file` in Kubernetes 1.6.2, that was offered by ACS.
+The https://github.com/kubernetes/kubernetes/commit/6782a48dfad40bcee63866545ecd045803403a5c[feature] will be first supported in Kubernetes 1.7.0, which is beta phase at the time of writing.
+
+We're not giving up that easily!
+When there's no provider, you still can fulfil the persistent volume claims by manually creating the persistent volumes.
+I don't have the command anymore it looked something like
+
+----
+kubectl get pvc -o jsontemplate=azure-pv-volume.yml.jsonpt | kubect create -f -
+-----
+
+Where the template looked like
+
+----
+{range .items[*]}
+apiVersion: "v1"
+kind: "PersistentVolume"
+metadata:
+  name: {.metadata.name}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: standard
+spec:
+  capacity:
+    storage: {.spec.resources.requests.storage}
+  accessModes:
+    - {.spec.accessModes[0]}
+  azureFile:
+    shareName: {.metadata.name}
+    secretName: azurefile-storage
+---
+{end}
+
+This still doesn't work. The Storage Class will create the shares for you.
+The persistent volume doesn't.
+We therefore need to create the volumes that we are referring to.
+In PowerShell it goes like this:
+
+----
+kubectl get pv -o json | ConvertFrom-Json |
+  % { $_.items } | 
+  % { az storage share create -n $_.spec.azureFil e.shareName --quota 5 }
+
+----
+
+Your pods now finally start, but Gogs -- the git repository -- will crash with error `database is locked`.
+It uses SQLite database and 
+
+Looking at the 
+As a side effect, I learned to at least read Go during this experiment.
+
+
 
 gofabric8 volumes
 so it would add hostPath to the claims. These are needed for azure file storage
