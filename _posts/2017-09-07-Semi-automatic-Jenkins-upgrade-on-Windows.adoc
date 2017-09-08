@@ -1,0 +1,44 @@
+= Semi-automatic Jenkins upgrade on Windows
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+// :published_at: 2019-01-31
+:hp-tags: Jenkins, Windows
+// :hp-alt-title: My English Title
+
+Jenkins offers nice auto-update functionality, where it will download new version, schedules a restart and updates.
+But what to do when it is unable to download the version?
+
+In our company there is this really annoying proxy antivirus scanner, that likes to inspect all `jar` and `war` files for viruses, so things like Wildfly or Netbeans take hours to download. 
+That's really bad new when one wants to update Jenkins, as it will time out after minute or two.
+
+The usual approach I take for plugins that fail to download, is that I download them manually (e. g. by replacing `http` with `https` in the mirror link, then the antivirus is bypassed ;)) and upload them into Jenkins. 
+This doesn't work for the main `war` file, of course.
+
+Should I've been running on Linux, I would just download the file, and overwrite existing file. 
+I'm on Windows and the process have the file locked.
+I would really like just to trigger this logic for upgrading the file at startup.
+
+To find out how that works I looked into Jenkins' https://github.com/jenkinsci/jenkins/blob/master/core/src/main/java/hudson/lifecycle/WindowsServiceLifecycle.java[WindowsLifecycleService]:
+
+[source,java]
+----
+include::https://raw.githubusercontent.com/jenkinsci/jenkins/0efdf8fb4f8c56f1f32fb390c472cb2e98e67f56/core/src/main/java/hudson/lifecycle/WindowsServiceLifecycle.java[lines=90..116]
+----
+
+So I did the same thing manually:
+
+1. Downloaded new `war` file to `d:\temp`
+1. Created file jenkins.copies in jenkins' home with content
++
+[source]
+----
+d:/temp/jenkins.war>d:/jenkins/jenkins.war
+----
+I saved it with UNIX line endings and verified, that there is indeed just single `\n` at the end (service will fail to start if that is not the case).
+
+1. Had jenkins restart once it is idle
+
+1. *DONE*. Jenkins did update just as if it had downloaded the file itself.
+
+I kept the `.copies` file handy for future updates. I will just put new version in `temp` and copy the `.copies` file over.
+
