@@ -1,4 +1,84 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Thu, 22 Jun 2017 07:26:07 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Fri, 08 Sep 2017 07:30:21 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Semi-automatic Jenkins upgrade on Windows]]></title><description><![CDATA[<div class="paragraph">
+<p>Jenkins offers nice auto-update functionality, where it will download new version, schedules a restart and updates.
+But what to do when it is unable to download the version?</p>
+</div>
+<div class="paragraph">
+<p>In our company there is this really annoying proxy antivirus scanner, that likes to inspect all <code>jar</code> and <code>war</code> files for viruses, so things like Wildfly or Netbeans take hours to download.
+That&#8217;s really bad new when one wants to update Jenkins, as it will time out after minute or two.</p>
+</div>
+<div class="paragraph">
+<p>The usual approach I take for plugins that fail to download, is that I download them manually (e. g. by replacing <code>http</code> with <code>https</code> in the mirror link, then the antivirus is bypassed ;)) and upload them into Jenkins.
+This doesn&#8217;t work for the main <code>war</code> file, of course.</p>
+</div>
+<div class="paragraph">
+<p>Should I&#8217;ve been running on Linux, I would just download the file, and overwrite existing file.
+I&#8217;m on Windows and the process have the file locked.
+I would really like just to trigger this logic for upgrading the file at startup.</p>
+</div>
+<div class="paragraph">
+<p>To find out how that works I looked into Jenkins' <a href="https://github.com/jenkinsci/jenkins/blob/master/core/src/main/java/hudson/lifecycle/WindowsServiceLifecycle.java">WindowsLifecycleService</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">    /**
+     * On Windows, jenkins.war is locked, so we place a new version under a special name,
+     * which is picked up by the service wrapper upon restart.
+     */
+    @Override
+    public void rewriteHudsonWar(File by) throws IOException {
+        File dest = getHudsonWar();
+        // this should be impossible given the canRewriteHudsonWar method,
+        // but let's be defensive
+        if(dest==null)  throw new IOException("jenkins.war location is not known.");
+
+        // backing up the old jenkins.war before its lost due to upgrading
+        // unless we are trying to rewrite jenkins.war by a backup itself
+        File bak = new File(dest.getPath() + ".bak");
+        if (!by.equals(bak))
+            FileUtils.copyFile(dest, bak);
+
+        String baseName = dest.getName();
+        baseName = baseName.substring(0,baseName.indexOf('.'));
+
+        File baseDir = getBaseDir();
+        File copyFiles = new File(baseDir,baseName+".copies");
+
+        try (FileWriter w = new FileWriter(copyFiles, true)) {
+            w.write(by.getAbsolutePath() + '&gt;' + getHudsonWar().getAbsolutePath() + '\n');
+        }
+    }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>So I did the same thing manually:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Downloaded new <code>war</code> file to <code>d:\temp</code></p>
+</li>
+<li>
+<p>Created file jenkins.copies in jenkins' home with content</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>d:/temp/jenkins.war&gt;d:/jenkins/jenkins.war</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>I saved it with UNIX line endings and verified, that there is indeed just single <code>\n</code> at the end (service will fail to start if that is not the case).</p>
+</div>
+</li>
+<li>
+<p>Had jenkins restart once it is idle</p>
+</li>
+<li>
+<p><strong>DONE</strong>. Jenkins did update just as if it had downloaded the file itself.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>I kept the <code>.copies</code> file handy for future updates. I will just put new version in <code>temp</code> and copy the <code>.copies</code> file over.</p>
+</div>]]></description><link>https://pdudits.github.io/2017/09/07/Semi-automatic-Jenkins-upgrade-on-Windows.html</link><guid isPermaLink="true">https://pdudits.github.io/2017/09/07/Semi-automatic-Jenkins-upgrade-on-Windows.html</guid><category><![CDATA[Jenkins]]></category><category><![CDATA[Windows]]></category><dc:creator><![CDATA[Patrik Duditš]]></dc:creator><pubDate>Thu, 07 Sep 2017 00:00:00 GMT</pubDate></item><item><title><![CDATA[Your Java EE App on Kubernetes]]></title><description><![CDATA[<div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
 <p>In <a href="https://pdudits.github.io/2017/05/23/Running-Payara-in-Kubernetes.html">previous  post</a> we managed to run Payara on Kubernetes.
