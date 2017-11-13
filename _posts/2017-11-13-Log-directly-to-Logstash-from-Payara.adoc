@@ -1,0 +1,236 @@
+= Log directly to Logstash from Payara
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+// :published_at: 2019-01-31
+:hp-tags: Payara, Logback, Elasticsearch
+// :hp-alt-title: My English Title
+
+When running multiple instances of an application server it is quite hard to see the correlations between the events.
+One of the best tools to enable that is the ELK stack - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.
+
+Solutions for Payara exist, that use better parseable log format (TODO: link to JSON log formatting article) which can be then processed by Logstash filebeats in order to have this log entries processed by remote logstash server.
+
+In our project, we chose different path -- we replaced all logging in the server and our applications with Logback, and make use of logback-logstash-appender to push the events directly to logstash over TCP socket.
+The appender uses LMAX disruptor internally to push the logs, so the processes is not blocking the application flow.
+
+This article will show you how to have this configured for your project as well.
+
+== Log everything via Logstash
+
+In first step, we replace backend for Payara's logging with logstash.
+
+https://github.com/goodees/goodees[Project goodees] was started by me to collect useful small components for Java EE, and Payara in particular.
+First released component is https://github.com/goodees/goodees/tree/master/payara-logback[payara-logback], that includes all libraries properly packaged to use logback as logging backend in Payara and also includes an installation script.
+Follow its instructions there to have your logging switched.
+
+
+== Logback and logstash configuration
+
+Our logback configuration looks similar to following:
+
+[source,xml]
+----
+<configuration scan="true">
+    <jmxConfigurator />
+    <shutdownHook/>
+    <!-- propagate changes to java.util.logging --> <!--1-->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"> 
+        <!--2-->
+        <file>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>60</maxHistory>
+        </rollingPolicy>
+     
+        <encoder>
+            <pattern>[%d{ISO8601}] [%t] [%4p] [%logger]: %m%n</pattern>
+        </encoder>
+    </appender>
+    
+  <appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender"><!--3-->
+    <file>${LOG_DIR}/glassfish/${isntanceName}/json/${isntanceName}.json</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.%d{yyyy-MM-dd}.json.zip</fileNamePattern>
+      <maxHistory>120</maxHistory>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"instance":"${instanceName}","type":"glassfish"}</customFields>
+    </encoder>
+  </appender>
+
+  <appender name="logstash-socket" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+    <destination>${LOGSTASH_DEST}</destination><!--4-->
+    <secondaryConnectionTTL>5 minutes</secondaryConnectionTTL>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"instance":"${instanceName}","type":"glassfish"}</customFields>
+    </encoder>
+  </appender>
+    
+    <root>
+        <level value="INFO" />
+        <appender-ref ref="FILE" />
+        <appender-ref ref="json"/>
+        <appender-ref ref="logstash-socket"/>
+    </root>
+</configuration>
+----
+<1> Propagation between slf4j and java.util.logging is needed
+<2> We put logging directory outside of domain directory, and controlled by environment variable. `instanceName` is a JVM argument, that is unique for every instance in our system.
+<3> We keep the JSON formatted logs on disk with greater retention period than our elasticsearch does. If we need we can re-upload those to analyze past events.
+<4> Mutliple destinations in form of `host:port[,host:port]` can be defined for logstash socket appender. We keep then in an environment variable.
+
+We have similar configuration for `logback-access.xml`
+
+[source,xml]
+----
+<configuration scan="true">
+  <jmxConfigurator/>
+  <shutdownHook/>
+  <!-- always a good activate OnConsoleStatusListener -->
+  <statusListener class="ch.qos.logback.core.status.OnErrorConsoleStatusListener" />
+
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+      <maxHistory>90</maxHistory>
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>combined</pattern>
+    </encoder>
+  </appender>
+  <appender-ref ref="FILE" />
+
+  <appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.json</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.%d{yyyy-MM-dd}.json.zip</fileNamePattern>
+      <maxHistory>10</maxHistory>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder">
+      <providers>
+         <timestamp/>
+         <version/>
+         <method/>
+         <protocol/>
+         <statusCode/>
+         <requestedUri/>
+         <remoteHost/>
+         <hostname/>
+         <remoteUser/>
+         <contentLength/>
+         <elapsedTime/>
+         <context/>
+         <pattern><pattern>
+           {"instance": "${instanceName}",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "server_name": "%v",
+            "type": "access"}
+         </pattern></pattern>
+      </providers>
+    </encoder>
+  </appender>
+
+  <appender name="logstash-socket" class="net.logstash.logback.appender.LogstashAccessTcpSocketAppender">
+     <destination>${LOGSTASH_DEST}</destination>
+     <secondaryConnectionTTL>5 minutes</secondaryConnectionTTL>
+     <encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder">
+      <providers>
+         <timestamp/>
+         <version/>
+         <method/>
+         <protocol/>
+         <statusCode/>
+         <requestedUri/>
+         <remoteHost/>
+         <hostname/>
+         <remoteUser/>
+         <contentLength/>
+         <elapsedTime/>
+         <context/>
+         <pattern><pattern>
+           {"instance": "${instanceName}",
+            "server_name": "%v",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "type": "access"}
+         </pattern></pattern>
+      </providers>
+    </encoder>
+  </appender>
+
+  <appender-ref ref="logstash-socket" />
+  <appender-ref ref="json" />
+</configuration>
+----
+
+Finally, the logstash configuration.
+It is quite simple, however access log events tend to have field names, that are incompatible with recent versions of elasticsearch, therefore they need to be adapted a bit:
+
+[source,ruby]
+----
+input {
+  tcp {
+    port => 1065 
+    codec => json_lines
+  }
+}
+
+filter {
+  if [type] == "access" {
+     mutate {
+        rename => {
+          "@fields.HOSTNAME" => "HOSTNAME"
+          "@fields.content_length" => "content_length"
+          "@fields.elapsed_time" => "elapsed_time"
+          "@fields.method" => "method"
+          "@fields.protocol" => "protocol"
+          "@fields.remote_host" => "remote_host"
+          "@fields.remote_user" => "remote_user"
+          "@fields.requested_uri" => "requested_uri"
+          "@fields.status_code" => "status_code"
+        }
+     }
+     if [forwarded_for] != "-" {
+        mutate {
+          rename => {
+             "forwarded_for" => "remote_host"
+          }
+        }
+     }
+     mutate {
+       remove_field => ["forwarded_for"]
+     }
+   }
+}
+
+output {
+  elasticsearch  {
+    hosts => #....
+  }
+}
+----
+
+== Adapt your application
+
+Your application also needs small tuning now to prevent various class incompatibility errors.
+Both slf4j-api, and logback-classic should now be a _provided_ dependencies of your application. 
+In other words, there should not be included in your _.war_ or _.ear_ build.
+
+== Downsides
+
+`asadmin set-log-levels` no longer works, as logback is the one filtering the levels and you need different way of controlling log levels.
+
+== Give feedback
+
+Let us know how this setup works for you.
+You're also invited to share your projects' https://github.com/goodees/goodees[goodees]!
