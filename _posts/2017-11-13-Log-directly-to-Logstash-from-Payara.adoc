@@ -85,6 +85,7 @@ Our logback configuration looks similar to following:
 </configuration>
 ----
 The following points should be noted:
+
 <1> Propagation between `slf4j and `java.util.logging` is needed
 <2> We put the logging directory outside of the domain directory, and controlled by an environment variable. `instanceName` is a JVM argument, that is unique for every instance in our system.
 <3> We keep the JSON formatted logs on disk with greater retention period than our Elasticsearch does. If we need to, we can re-upload those to analyze past events.
