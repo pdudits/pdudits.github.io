@@ -5,23 +5,24 @@
 :hp-tags: Payara, Logback, Elasticsearch
 // :hp-alt-title: My English Title
 
-When running multiple instances of an application server it is quite hard to see the correlations between the events.
-One of the best tools to enable that is the ELK stack - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.
+When running multiple instances of an application server it is quite hard to see correlations between events.
+One of the best tools to enable that is https://www.elastic.co/products[the ELK stack] - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.
 
-Solutions for Payara exist, that use better parseable log format (TODO: link to JSON log formatting article) which can be then processed by Logstash filebeats in order to have this log entries processed by remote logstash server.
+https://docs.payara.fish/documentation/core-documentation/logging/payara/json-formatter.html[Solutions for Payara Server exist, that use better parseable log format] which can be then processed by https://www.elastic.co/products/beats/filebeat[Logstash Filebeat] in order to have these log entries processed by a remote Logstash server.
 
-In our project, we chose different path -- we replaced all logging in the server and our applications with Logback, and make use of logback-logstash-appender to push the events directly to logstash over TCP socket.
-The appender uses LMAX disruptor internally to push the logs, so the processes is not blocking the application flow.
+In our project, we chose a different path -- we replaced all logging in the server and our applications with Logback, and make use of the `logback-logstash-appender` to push the events directly to Logstash over a TCP socket.
+The appender uses LMAX disruptor internally to push the logs, so the processes does not block the application flow.
 
 This article will show you how to have this configured for your project as well.
 
 == Log everything via Logstash
 
-In first step, we replace backend for Payara's logging with logstash.
+In first step, we replace the backend for Payara Server's logging with logstash.
 
-https://github.com/goodees/goodees[Project goodees] was started by me to collect useful small components for Java EE, and Payara in particular.
-First released component is https://github.com/goodees/goodees/tree/master/payara-logback[payara-logback], that includes all libraries properly packaged to use logback as logging backend in Payara and also includes an installation script.
-Follow its instructions there to have your logging switched.
+https://github.com/goodees/goodees[Project goodees] was started by me to collect useful small components for Java EE, and Payara Server in particular.
+The first released component is https://github.com/goodees/goodees/tree/master/payara-logback[payara-logback], that includes all libraries properly packaged to use logback as the logging backend in Payara Server and also includes an installation script.
+
+Follow https://github.com/goodees/goodees/blob/master/payara-logback/README.adoc[the instructions there] to switch your logging.
 
 
 == Logback and logstash configuration
@@ -83,12 +84,14 @@ Our logback configuration looks similar to following:
     </root>
 </configuration>
 ----
-<1> Propagation between slf4j and java.util.logging is needed
-<2> We put logging directory outside of domain directory, and controlled by environment variable. `instanceName` is a JVM argument, that is unique for every instance in our system.
-<3> We keep the JSON formatted logs on disk with greater retention period than our elasticsearch does. If we need we can re-upload those to analyze past events.
-<4> Mutliple destinations in form of `host:port[,host:port]` can be defined for logstash socket appender. We keep then in an environment variable.
+The following points should be noted:
 
-We have similar configuration for `logback-access.xml`
+<1> Propagation between `slf4j and `java.util.logging` is needed
+<2> We put the logging directory outside of the domain directory, and controlled by an environment variable. `instanceName` is a JVM argument, that is unique for every instance in our system.
+<3> We keep the JSON formatted logs on disk with greater retention period than our Elasticsearch does. If we need to, we can re-upload those to analyze past events.
+<4> Mutliple destinations in form of `host:port[,host:port]` can be defined for the Logstash socket appender. We keep then in an environment variable.
+
+We have similar configuration for `logback-access.xml`:
 
 [source,xml]
 ----
@@ -174,7 +177,8 @@ We have similar configuration for `logback-access.xml`
 ----
 
 Finally, the logstash configuration.
-It is quite simple, however access log events tend to have field names, that are incompatible with recent versions of elasticsearch, therefore they need to be adapted a bit:
+
+It is quite a simple configuration, however access log events tend to have field names that are incompatible with recent versions of elasticsearch. To work around this problem, they need to be adapted a bit, as shown in the filter below:
 
 [source,ruby]
 ----
@@ -223,14 +227,14 @@ output {
 == Adapt your application
 
 Your application also needs small tuning now to prevent various class incompatibility errors.
-Both slf4j-api, and logback-classic should now be a _provided_ dependencies of your application. 
-In other words, there should not be included in your _.war_ or _.ear_ build.
+Both `slf4j-api`, and `logback-classic` should now be _provided_ dependencies of your application. 
+In other words, they should *not* be included in your _.war_ or _.ear_ build.
 
 == Downsides
 
-`asadmin set-log-levels` no longer works, as logback is the one filtering the levels and you need different way of controlling log levels.
+It is important to note that `asadmin set-log-levels` no longer works with this configuration, as logback is the one filtering the levels. You will need a different way of controlling log levels with this kind of configuration.
 
 == Give feedback
 
-Let us know how this setup works for you.
+Let us know how this setup works for you in the comments below.
 You're also invited to share your projects' https://github.com/goodees/goodees[goodees]!
