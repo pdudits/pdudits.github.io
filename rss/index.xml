@@ -1,4 +1,299 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Fri, 08 Sep 2017 07:30:21 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Semi-automatic Jenkins upgrade on Windows]]></title><description><![CDATA[<div class="paragraph">
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Not obvious ]]></title><description><![CDATA[Notes about programming tasks that took too long. By Patrik Duditš. ]]></description><link>https://pdudits.github.io</link><image><url>https://cloud.githubusercontent.com/assets/1588543/21372338/c07f1c2e-c716-11e6-8daa-aa3b35a2d2cf.jpg</url><title>Not obvious </title><link>https://pdudits.github.io</link></image><generator>RSS for Node</generator><lastBuildDate>Thu, 30 Nov 2017 15:11:04 GMT</lastBuildDate><atom:link href="https://pdudits.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Log directly to Logstash from Payara]]></title><description><![CDATA[<div id="preamble">
+<div class="sectionbody">
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Also published on <a href="http://blog.payara.fish/log-directly-to-logstash-from-payara-server">Payara blog</a>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>When running multiple instances of an application server it is quite hard to see correlations between events.
+One of the best tools to enable that is <a href="https://www.elastic.co/products">the ELK stack</a> - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.</p>
+</div>
+<div class="paragraph">
+<p><a href="https://docs.payara.fish/documentation/core-documentation/logging/payara/json-formatter.html">Solutions for Payara Server exist</a>, that use better parseable log format]which can be then processed by <a href="https://www.elastic.co/products/beats/filebeat">Logstash Filebeat</a> in order to have these log entries processed by a remote Logstash server.</p>
+</div>
+<div class="paragraph">
+<p>In our project, we chose a different path&#8201;&#8212;&#8201;we replaced all logging in the server and our applications with Logback, and make use of the  <a href="https://github.com/logstash/logstash-logback-encoder"><code>logback-logstash-appender</code></a> to push the events directly to Logstash over a TCP socket.
+The appender uses LMAX disruptor internally to push the logs, so the processes does not block the application flow.</p>
+</div>
+<div class="paragraph">
+<p>This article will show you how to have this configured for your project as well.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_log_everything_via_logstash">Log everything via Logstash</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In first step, we replace the backend for Payara Server&#8217;s logging with logstash.</p>
+</div>
+<div class="paragraph">
+<p><a href="https://github.com/goodees/goodees">Project goodees</a> was started by me to collect useful small components for Java EE, and Payara Server in particular.
+The first released component is <a href="https://github.com/goodees/goodees/tree/master/payara-logback">payara-logback</a>, that includes all libraries properly packaged to use logback as the logging backend in Payara Server and also includes an installation script.</p>
+</div>
+<div class="paragraph">
+<p>Follow <a href="https://github.com/goodees/goodees/blob/master/payara-logback/README.adoc">the instructions there</a> to switch your logging.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_logback_and_logstash_configuration">Logback and logstash configuration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Our logback configuration looks similar to following:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-xml" data-lang="xml">&lt;configuration scan="true"&gt;
+    &lt;jmxConfigurator /&gt;
+    &lt;shutdownHook/&gt;
+    &lt;!-- propagate changes to java.util.logging --&gt; <i class="conum" data-value="1"></i><b>(1)</b>
+    &lt;contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"&gt;
+        &lt;resetJUL&gt;true&lt;/resetJUL&gt;
+    &lt;/contextListener&gt;
+
+    &lt;appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
+        <i class="conum" data-value="2"></i><b>(2)</b>
+        &lt;file&gt;${LOG_DIR}/glassfish/${instanceName}/${instanceName}.log&lt;/file&gt;
+        &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
+            &lt;!-- daily rollover --&gt;
+            &lt;fileNamePattern&gt;${LOG_DIR}/glassfish/${instanceName}/${instanceName}.%d{yyyy-MM-dd}.%i.log&lt;/fileNamePattern&gt;
+            &lt;timeBasedFileNamingAndTriggeringPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP"&gt;
+                &lt;maxFileSize&gt;50MB&lt;/maxFileSize&gt;
+            &lt;/timeBasedFileNamingAndTriggeringPolicy&gt;
+            &lt;maxHistory&gt;60&lt;/maxHistory&gt;
+        &lt;/rollingPolicy&gt;
+
+        &lt;encoder&gt;
+            &lt;pattern&gt;[%d{ISO8601}] [%t] [%4p] [%logger]: %m%n&lt;/pattern&gt;
+        &lt;/encoder&gt;
+    &lt;/appender&gt;
+
+  &lt;appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;<i class="conum" data-value="3"></i><b>(3)</b>
+    &lt;file&gt;${LOG_DIR}/glassfish/${isntanceName}/json/${isntanceName}.json&lt;/file&gt;
+    &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
+      &lt;fileNamePattern&gt;${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.%d{yyyy-MM-dd}.json.zip&lt;/fileNamePattern&gt;
+      &lt;maxHistory&gt;120&lt;/maxHistory&gt;
+    &lt;/rollingPolicy&gt;
+    &lt;encoder class="net.logstash.logback.encoder.LogstashEncoder"&gt;
+      &lt;customFields&gt;{"instance":"${instanceName}","type":"glassfish"}&lt;/customFields&gt;
+    &lt;/encoder&gt;
+  &lt;/appender&gt;
+
+  &lt;appender name="logstash-socket" class="net.logstash.logback.appender.LogstashTcpSocketAppender"&gt;
+    &lt;destination&gt;${LOGSTASH_DEST}&lt;/destination&gt;<i class="conum" data-value="4"></i><b>(4)</b>
+    &lt;secondaryConnectionTTL&gt;5 minutes&lt;/secondaryConnectionTTL&gt;
+    &lt;encoder class="net.logstash.logback.encoder.LogstashEncoder"&gt;
+      &lt;customFields&gt;{"instance":"${instanceName}","type":"glassfish"}&lt;/customFields&gt;
+    &lt;/encoder&gt;
+  &lt;/appender&gt;
+
+    &lt;root&gt;
+        &lt;level value="INFO" /&gt;
+        &lt;appender-ref ref="FILE" /&gt;
+        &lt;appender-ref ref="json"/&gt;
+        &lt;appender-ref ref="logstash-socket"/&gt;
+    &lt;/root&gt;
+&lt;/configuration&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The following points should be noted:</p>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Propagation between <code>slf4j and `java.util.logging</code> is needed</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>We put the logging directory outside of the domain directory, and controlled by an environment variable. <code>instanceName</code> is a JVM argument, that is unique for every instance in our system.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>We keep the JSON formatted logs on disk with greater retention period than our Elasticsearch does. If we need to, we can re-upload those to analyze past events.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Mutliple destinations in form of <code>host:port[,host:port]</code> can be defined for the Logstash socket appender. We keep them in an environment variable.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>We have similar configuration for <code>logback-access.xml</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-xml" data-lang="xml">&lt;configuration scan="true"&gt;
+  &lt;jmxConfigurator/&gt;
+  &lt;shutdownHook/&gt;
+  &lt;!-- always a good activate OnConsoleStatusListener --&gt;
+  &lt;statusListener class="ch.qos.logback.core.status.OnErrorConsoleStatusListener" /&gt;
+
+  &lt;appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
+    &lt;file&gt;${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.log&lt;/file&gt;
+    &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
+      &lt;fileNamePattern&gt;${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.%d{yyyy-MM-dd}.log.zip&lt;/fileNamePattern&gt;
+      &lt;maxHistory&gt;90&lt;/maxHistory&gt;
+    &lt;/rollingPolicy&gt;
+
+    &lt;encoder&gt;
+      &lt;pattern&gt;combined&lt;/pattern&gt;
+    &lt;/encoder&gt;
+  &lt;/appender&gt;
+  &lt;appender-ref ref="FILE" /&gt;
+
+  &lt;appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
+    &lt;file&gt;${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.json&lt;/file&gt;
+    &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
+      &lt;fileNamePattern&gt;${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.%d{yyyy-MM-dd}.json.zip&lt;/fileNamePattern&gt;
+      &lt;maxHistory&gt;10&lt;/maxHistory&gt;
+    &lt;/rollingPolicy&gt;
+    &lt;encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder"&gt;
+      &lt;providers&gt;
+         &lt;timestamp/&gt;
+         &lt;version/&gt;
+         &lt;method/&gt;
+         &lt;protocol/&gt;
+         &lt;statusCode/&gt;
+         &lt;requestedUri/&gt;
+         &lt;remoteHost/&gt;
+         &lt;hostname/&gt;
+         &lt;remoteUser/&gt;
+         &lt;contentLength/&gt;
+         &lt;elapsedTime/&gt;
+         &lt;context/&gt;
+         &lt;pattern&gt;&lt;pattern&gt;
+           {"instance": "${instanceName}",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "server_name": "%v",
+            "type": "access"}
+         &lt;/pattern&gt;&lt;/pattern&gt;
+      &lt;/providers&gt;
+    &lt;/encoder&gt;
+  &lt;/appender&gt;
+
+  &lt;appender name="logstash-socket" class="net.logstash.logback.appender.LogstashAccessTcpSocketAppender"&gt;
+     &lt;destination&gt;${LOGSTASH_DEST}&lt;/destination&gt;
+     &lt;secondaryConnectionTTL&gt;5 minutes&lt;/secondaryConnectionTTL&gt;
+     &lt;encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder"&gt;
+      &lt;providers&gt;
+         &lt;timestamp/&gt;
+         &lt;version/&gt;
+         &lt;method/&gt;
+         &lt;protocol/&gt;
+         &lt;statusCode/&gt;
+         &lt;requestedUri/&gt;
+         &lt;remoteHost/&gt;
+         &lt;hostname/&gt;
+         &lt;remoteUser/&gt;
+         &lt;contentLength/&gt;
+         &lt;elapsedTime/&gt;
+         &lt;context/&gt;
+         &lt;pattern&gt;&lt;pattern&gt;
+           {"instance": "${instanceName}",
+            "server_name": "%v",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "type": "access"}
+         &lt;/pattern&gt;&lt;/pattern&gt;
+      &lt;/providers&gt;
+    &lt;/encoder&gt;
+  &lt;/appender&gt;
+
+  &lt;appender-ref ref="logstash-socket" /&gt;
+  &lt;appender-ref ref="json" /&gt;
+&lt;/configuration&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Finally, the logstash configuration.</p>
+</div>
+<div class="paragraph">
+<p>It is quite a simple, however access log events tend to have field names that are incompatible with recent versions of elasticsearch. To work around this problem, they need to be adapted a bit, as shown in the filter below:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-ruby" data-lang="ruby">input {
+  tcp {
+    port =&gt; 1065
+    codec =&gt; json_lines
+  }
+}
+
+filter {
+  if [type] == "access" {
+     mutate {
+        rename =&gt; {
+          "@fields.HOSTNAME" =&gt; "HOSTNAME"
+          "@fields.content_length" =&gt; "content_length"
+          "@fields.elapsed_time" =&gt; "elapsed_time"
+          "@fields.method" =&gt; "method"
+          "@fields.protocol" =&gt; "protocol"
+          "@fields.remote_host" =&gt; "remote_host"
+          "@fields.remote_user" =&gt; "remote_user"
+          "@fields.requested_uri" =&gt; "requested_uri"
+          "@fields.status_code" =&gt; "status_code"
+        }
+     }
+     if [forwarded_for] != "-" {
+        mutate {
+          rename =&gt; {
+             "forwarded_for" =&gt; "remote_host"
+          }
+        }
+     }
+     mutate {
+       remove_field =&gt; ["forwarded_for"]
+     }
+   }
+}
+
+output {
+  elasticsearch  {
+    hosts =&gt; #....
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_adapt_your_application">Adapt your application</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Your application also needs small tuning now to prevent various class incompatibility errors.
+Both <code>slf4j-api</code>, and <code>logback-classic</code> should now be <em>provided</em> dependencies of your application.
+In other words, they should <strong>not</strong> be included in your <em>.war</em> or <em>.ear</em> build.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_downsides">Downsides</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>It is important to note that <code>asadmin set-log-levels</code> no longer works, as logback is the one filtering the levels.
+You will need a different way of controlling log levels with this kind of configuration.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_give_feedback">Give feedback</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let us know how this setup works for you in comments on <a href="http://blog.payara.fish/log-directly-to-logstash-from-payara-server">Payara blog</a>.
+You&#8217;re also invited to share your projects' <a href="https://github.com/goodees/goodees">goodees</a>!</p>
+</div>
+</div>
+</div>]]></description><link>https://pdudits.github.io/2017/11/30/Log-directly-to-Logstash-from-Payara.html</link><guid isPermaLink="true">https://pdudits.github.io/2017/11/30/Log-directly-to-Logstash-from-Payara.html</guid><dc:creator><![CDATA[Patrik Duditš]]></dc:creator></item><item><title><![CDATA[Semi-automatic Jenkins upgrade on Windows]]></title><description><![CDATA[<div class="paragraph">
 <p>Jenkins offers nice auto-update functionality, where it will download new version, schedules a restart and updates.
 But what to do when it is unable to download the version?</p>
 </div>
@@ -249,12 +544,13 @@ It is a declaration of what Pod should look like with added features like replic
       volumes:
       - name: apps                    <i class="conum" data-value="1"></i><b>(1)</b>
         emptyDir: {}
-      containers:
+      initContainers:
       - alias: app-sidecar            <i class="conum" data-value="2"></i><b>(2)</b>
         volumeMounts:
         - name: apps                  <i class="conum" data-value="3"></i><b>(3)</b>
           mountPath: /apps
-        command: ["sh","-c", "cp -a /maven/*.war /apps; tail -f /dev/null"] <i class="conum" data-value="4"></i><b>(4)</b>
+        command: ["sh","-c", "cp -a /maven/*.war /apps"] <i class="conum" data-value="4"></i><b>(4)</b>
+      containers:
       - image: payara/server-full:171 <i class="conum" data-value="5"></i><b>(5)</b>
         name: payara
         command: ["bin/asadmin", "start-domain", "-v"]
