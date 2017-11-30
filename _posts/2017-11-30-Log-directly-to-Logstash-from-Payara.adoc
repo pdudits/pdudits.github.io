@@ -1,0 +1,243 @@
+= Log directly to Logstash from Payara
+// See https://hubpress.gitbooks.io/hubpress-knowledgebase/content/ for information about the parameters.
+// :hp-image: /covers/cover.png
+:published_at: 2017-11-30
+:hp-tags: Payara, Logback, Elasticsearch
+// :hp-alt-title: My English Title
+
+TIP: Also published on http://blog.payara.fish/log-directly-to-logstash-from-payara-server[Payara blog]
+
+When running multiple instances of an application server it is quite hard to see correlations between events.
+One of the best tools to enable that is https://www.elastic.co/products[the ELK stack] - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.
+
+https://docs.payara.fish/documentation/core-documentation/logging/payara/json-formatter.html[Solutions for Payara Server exist], that use better parseable log format]which can be then processed by https://www.elastic.co/products/beats/filebeat[Logstash Filebeat] in order to have these log entries processed by a remote Logstash server.
+
+In our project, we chose a different path -- we replaced all logging in the server and our applications with Logback, and make use of the  https://github.com/logstash/logstash-logback-encoder[`logback-logstash-appender`] to push the events directly to Logstash over a TCP socket.
+The appender uses LMAX disruptor internally to push the logs, so the processes does not block the application flow.
+
+This article will show you how to have this configured for your project as well.
+
+== Log everything via Logstash
+
+In first step, we replace the backend for Payara Server's logging with logstash.
+
+https://github.com/goodees/goodees[Project goodees] was started by me to collect useful small components for Java EE, and Payara Server in particular.
+The first released component is https://github.com/goodees/goodees/tree/master/payara-logback[payara-logback], that includes all libraries properly packaged to use logback as the logging backend in Payara Server and also includes an installation script.
+
+Follow https://github.com/goodees/goodees/blob/master/payara-logback/README.adoc[the instructions there] to switch your logging.
+
+
+== Logback and logstash configuration
+
+Our logback configuration looks similar to following:
+
+[source,xml]
+----
+<configuration scan="true">
+    <jmxConfigurator />
+    <shutdownHook/>
+    <!-- propagate changes to java.util.logging --> <!--1-->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"> 
+        <!--2-->
+        <file>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy
+                class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <maxHistory>60</maxHistory>
+        </rollingPolicy>
+     
+        <encoder>
+            <pattern>[%d{ISO8601}] [%t] [%4p] [%logger]: %m%n</pattern>
+        </encoder>
+    </appender>
+    
+  <appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender"><!--3-->
+    <file>${LOG_DIR}/glassfish/${isntanceName}/json/${isntanceName}.json</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.%d{yyyy-MM-dd}.json.zip</fileNamePattern>
+      <maxHistory>120</maxHistory>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"instance":"${instanceName}","type":"glassfish"}</customFields>
+    </encoder>
+  </appender>
+
+  <appender name="logstash-socket" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+    <destination>${LOGSTASH_DEST}</destination><!--4-->
+    <secondaryConnectionTTL>5 minutes</secondaryConnectionTTL>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"instance":"${instanceName}","type":"glassfish"}</customFields>
+    </encoder>
+  </appender>
+    
+    <root>
+        <level value="INFO" />
+        <appender-ref ref="FILE" />
+        <appender-ref ref="json"/>
+        <appender-ref ref="logstash-socket"/>
+    </root>
+</configuration>
+----
+The following points should be noted:
+
+<1> Propagation between `slf4j and `java.util.logging` is needed
+<2> We put the logging directory outside of the domain directory, and controlled by an environment variable. `instanceName` is a JVM argument, that is unique for every instance in our system.
+<3> We keep the JSON formatted logs on disk with greater retention period than our Elasticsearch does. If we need to, we can re-upload those to analyze past events.
+<4> Mutliple destinations in form of `host:port[,host:port]` can be defined for the Logstash socket appender. We keep them in an environment variable.
+
+We have similar configuration for `logback-access.xml`:
+
+[source,xml]
+----
+<configuration scan="true">
+  <jmxConfigurator/>
+  <shutdownHook/>
+  <!-- always a good activate OnConsoleStatusListener -->
+  <statusListener class="ch.qos.logback.core.status.OnErrorConsoleStatusListener" />
+
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/${instanceName}.access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+      <maxHistory>90</maxHistory>
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>combined</pattern>
+    </encoder>
+  </appender>
+  <appender-ref ref="FILE" />
+
+  <appender name="json" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.json</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>${LOG_DIR}/glassfish/${instanceName}/json/${instanceName}.access.%d{yyyy-MM-dd}.json.zip</fileNamePattern>
+      <maxHistory>10</maxHistory>
+    </rollingPolicy>
+    <encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder">
+      <providers>
+         <timestamp/>
+         <version/>
+         <method/>
+         <protocol/>
+         <statusCode/>
+         <requestedUri/>
+         <remoteHost/>
+         <hostname/>
+         <remoteUser/>
+         <contentLength/>
+         <elapsedTime/>
+         <context/>
+         <pattern><pattern>
+           {"instance": "${instanceName}",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "server_name": "%v",
+            "type": "access"}
+         </pattern></pattern>
+      </providers>
+    </encoder>
+  </appender>
+
+  <appender name="logstash-socket" class="net.logstash.logback.appender.LogstashAccessTcpSocketAppender">
+     <destination>${LOGSTASH_DEST}</destination>
+     <secondaryConnectionTTL>5 minutes</secondaryConnectionTTL>
+     <encoder class="net.logstash.logback.encoder.AccessEventCompositeJsonEncoder">
+      <providers>
+         <timestamp/>
+         <version/>
+         <method/>
+         <protocol/>
+         <statusCode/>
+         <requestedUri/>
+         <remoteHost/>
+         <hostname/>
+         <remoteUser/>
+         <contentLength/>
+         <elapsedTime/>
+         <context/>
+         <pattern><pattern>
+           {"instance": "${instanceName}",
+            "server_name": "%v",
+            "forwarded_for": "%header{X-Forwarded-For}",
+            "type": "access"}
+         </pattern></pattern>
+      </providers>
+    </encoder>
+  </appender>
+
+  <appender-ref ref="logstash-socket" />
+  <appender-ref ref="json" />
+</configuration>
+----
+
+Finally, the logstash configuration.
+
+It is quite a simple, however access log events tend to have field names that are incompatible with recent versions of elasticsearch. To work around this problem, they need to be adapted a bit, as shown in the filter below:
+
+[source,ruby]
+----
+input {
+  tcp {
+    port => 1065 
+    codec => json_lines
+  }
+}
+
+filter {
+  if [type] == "access" {
+     mutate {
+        rename => {
+          "@fields.HOSTNAME" => "HOSTNAME"
+          "@fields.content_length" => "content_length"
+          "@fields.elapsed_time" => "elapsed_time"
+          "@fields.method" => "method"
+          "@fields.protocol" => "protocol"
+          "@fields.remote_host" => "remote_host"
+          "@fields.remote_user" => "remote_user"
+          "@fields.requested_uri" => "requested_uri"
+          "@fields.status_code" => "status_code"
+        }
+     }
+     if [forwarded_for] != "-" {
+        mutate {
+          rename => {
+             "forwarded_for" => "remote_host"
+          }
+        }
+     }
+     mutate {
+       remove_field => ["forwarded_for"]
+     }
+   }
+}
+
+output {
+  elasticsearch  {
+    hosts => #....
+  }
+}
+----
+
+== Adapt your application
+
+Your application also needs small tuning now to prevent various class incompatibility errors.
+Both `slf4j-api`, and `logback-classic` should now be _provided_ dependencies of your application. 
+In other words, they should *not* be included in your _.war_ or _.ear_ build.
+
+== Downsides
+
+It is important to note that `asadmin set-log-levels` no longer works, as logback is the one filtering the levels. 
+You will need a different way of controlling log levels with this kind of configuration.
+
+== Give feedback
+
+Let us know how this setup works for you in comments on http://blog.payara.fish/log-directly-to-logstash-from-payara-server[Payara blog].
+You're also invited to share your projects' https://github.com/goodees/goodees[goodees]!
