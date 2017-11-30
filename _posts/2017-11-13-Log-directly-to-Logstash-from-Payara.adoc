@@ -5,7 +5,7 @@
 :hp-tags: Payara, Logback, Elasticsearch
 // :hp-alt-title: My English Title
 
-TIP: Also published on http://blog.payara.fish/log-directly-to-logstash-from-payara-server[Payara blog]
+NOTE: Also published on http://blog.payara.fish/log-directly-to-logstash-from-payara-server[Payara blog]
 
 When running multiple instances of an application server it is quite hard to see correlations between events.
 One of the best tools to enable that is https://www.elastic.co/products[the ELK stack] - Elasticsearch for building fulltext index of the log entries, Logstash for managing the inflow the events, and Kibana as a user interface on top of that.
